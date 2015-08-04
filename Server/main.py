@@ -1,4 +1,4 @@
-from twisted.internet.protocol import Protocol
+from twisted.internet.protocol import Protocol, ProcessProtocol
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
@@ -7,7 +7,7 @@ import json, sys
 
 port = int(sys.argv[1])
 
-class BuildConfig(ProcessProtocol):
+class BuildConfig(Protocol):
 	message = ''
 
 	def __init__(self, factory):
@@ -23,6 +23,8 @@ class BuildConfig(ProcessProtocol):
 			# 1. make loop to start processes 
 			# if ... pasre lockfile..
 			# or just use processExited to start another one in case there are more patches..
+	def connectionLost(self):
+		print 1
 
 		
 
@@ -39,6 +41,6 @@ def main():
 	reactor.run()
 
 
-
+# https://twistedmatrix.com/documents/8.1.0/api/twisted.internet.protocol.ProcessProtocol.html
 if __name__ == '__main__':
 	main()
