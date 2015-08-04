@@ -2,13 +2,12 @@ from twisted.internet.protocol import Protocol
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
+from controller import InstallProc
 import json, sys
-from exceptions import ValueError
-
 
 port = int(sys.argv[1])
 
-class BuildConfig(Protocol):
+class BuildConfig(ProcessProtocol):
 	message = ''
 
 	def __init__(self, factory):
@@ -16,14 +15,16 @@ class BuildConfig(Protocol):
 
 	def dataReceived(self, data):
 		self.message+=data
-		print self.message
-		if '"end": 1' in self.message:
-			msg = json.loads(self.message)
-			with open('test.txt', 'a') as the_file:
-				the_file.write(str(port)+': '+repr(msg)+'\n')
-			the_file.close()
+		if '"end": 1}' in self.message:
+			request = json.loads(self.message)
+			server_installation = InstallProc(request)
+			# for i in xrange(server_installation.servers_num):
+			# test ProcessProtocol
+			# 1. make loop to start processes 
+			# if ... pasre lockfile..
+			# or just use processExited to start another one in case there are more patches..
 
-		# надо тут еще придумать как-то передавать параметры для запуска процессов установки. И отслеживать их статус.
+		
 
 class BCFactory(Factory):
 	"""docstring for BCFactory"""
