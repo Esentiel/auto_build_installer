@@ -28,14 +28,17 @@ class BuildConfig(Protocol):
 			request = json.loads(self.message)
 			server_installation = InstallProc(request)
 			self.run_processes(server_installation)
+			response = InstallProc.build_responce()
+			self.transport.write(response)
 
 	def run_processes(self, server_installation_obj):
 		for i in xrange(server_installation_obj.servers_num):
 			for j in xrange(len(server_installation_obj['servers']['server_{0}'.format(i)])):
 				command.extend(to_list(server_installation_obj['servers']['server_{0}'.format(i)][j]))
 				# <TBD>
-				server_id = server_installation_obj['server_{0}'.format(i)][j][0]
-				patch_num = server_installation_obj['server_{0}'.format(i)][j][1]-1
+				transaction_id = server_installation_obj['server_{0}'.format(i)][j][0]
+				server_id = server_installation_obj['server_{0}'.format(i)][j][1]
+				patch_num = server_installation_obj['server_{0}'.format(i)][j][2]-1
 				if server_installation_obj.get_status(server_id, patch_num):
 					pp = MyPP()
 					command = ['C:\Python27\python.exe','installer.py']
