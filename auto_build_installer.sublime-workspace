@@ -4,12 +4,20 @@
 		"selected_items":
 		[
 			[
-				"js",
-				"json_file"
+				"serv",
+				"server_id"
 			],
 			[
-				"serv",
-				"server_"
+				"server",
+				"servers"
+			],
+			[
+				"lock",
+				"lock_file"
+			],
+			[
+				"js",
+				"json_file"
 			],
 			[
 				"se",
@@ -27,46 +35,6 @@
 	},
 	"buffers":
 	[
-		{
-			"file": "Server/main.py",
-			"settings":
-			{
-				"buffer_size": 1182,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "Server/test.py",
-			"settings":
-			{
-				"buffer_size": 637,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "Server/controller.py",
-			"settings":
-			{
-				"buffer_size": 959,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "Client_light/install_qeue.json",
-			"settings":
-			{
-				"buffer_size": 1151,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "Client_light/client.py",
-			"settings":
-			{
-				"buffer_size": 340,
-				"line_ending": "Windows"
-			}
-		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -126,6 +94,12 @@
 	],
 	"file_history":
 	[
+		"/E/Documents/GitHub/auto_build_installer/Server/main.py",
+		"/E/Documents/GitHub/auto_build_installer/Server/controller.py",
+		"/E/Documents/GitHub/auto_build_installer/Client_light/install_qeue.json",
+		"/E/Documents/GitHub/auto_build_installer/Client_light/client.py",
+		"/E/Documents/GitHub/auto_build_installer/Server/test.txt",
+		"/E/Documents/GitHub/auto_build_installer/Server/test.py",
 		"/E/Documents/GitHub/auto_build_installer/auto_build_installer.sublime-project",
 		"/E/Documents/python/test.py",
 		"/E/Documents/python/smb.py",
@@ -165,152 +139,8 @@
 	"groups":
 	[
 		{
-			"selected": 0,
 			"sheets":
 			[
-				{
-					"buffer": 0,
-					"file": "Server/main.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1182,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1146,
-								1146
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": -0.0,
-						"translation.y": 57.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "Server/test.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 637,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								201,
-								214
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.tmLanguage",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "Server/controller.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 959,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								342,
-								342
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 2,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "Client_light/install_qeue.json",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1151,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								357,
-								357
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/JavaScript/JSON.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "Client_light/client.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 340,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								330,
-								330
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				}
 			]
 		}
 	],
