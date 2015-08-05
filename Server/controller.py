@@ -28,7 +28,7 @@ class InstallProc(object):
    				arr = lock_file.readlines()
 			lock_file.close()
 			server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(', '))
-			if server_info[1] == 'PASSED' and int(server_info[0]) == patch_num:
+			if server_info[1] == 'PASSED' and (int(server_info[0]) == patch_num or patch_num = -1):
 				return True
 			else:
 				return False
