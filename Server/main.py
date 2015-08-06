@@ -38,20 +38,22 @@ class BuildConfig(Protocol):
 			
 
 	def run_processes(self, server_installation_obj):
-		for i in xrange(server_installation_obj.servers_num):
-			for j in xrange(len(server_installation_obj.__dict__['server_{0}'.format(i)])):
-				transaction_id = server_installation_obj.__dict__['server_{0}'.format(i)][j][0]
-				server_id = server_installation_obj.__dict__['server_{0}'.format(i)][j][1]
-				patch_num = server_installation_obj.__dict__['server_{0}'.format(i)][j][2]-1
-				patch = server_installation_obj.__dict__['server_{0}'.format(i)][j][3]
+		for i in xrange(len(server_installation_obj.servers)):
+			for j in xrange(len(server_installation_obj.servers[i])):
+				transaction_id = server_installation_obj.servers[i][j][0]
+				server_id = server_installation_obj.servers[i][j][1]
+				patch_num = server_installation_obj.servers[i][j][2]-1
+				patch = server_installation_obj.servers[i][j][3]
 				if server_installation_obj.get_status(server_id, patch_num):
 					pp = MyPP()
 					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
+					print command
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
-					logg(server_installation_obj.__dict__['server_{0}'.format(i)][j])
-					del server_installation_obj.__dict__['server_{0}'.format(i)][j]
+					logg(server_installation_obj.servers[i][j])
+					del server_installation_obj.servers[i][j]
 					time.sleep(5)
+					break
 					
 
 class BCFactory(Factory):

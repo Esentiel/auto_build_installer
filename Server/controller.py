@@ -7,6 +7,7 @@ class InstallProc(object):
 		self.json_source = json_source
 		self.servers_num = int(len(self.json_source['servers'].keys()))
 		self.transaction_id = self.json_source['transaction_id']
+		self.servers = []
 		for i in xrange(self.servers_num):
 			patchs_num = len(self.json_source['servers']['server_{num}'.format(num = i)].keys())-1
 			patchs_list = []
@@ -15,11 +16,11 @@ class InstallProc(object):
 									self.json_source['servers']['server_{0}'.format(i)]['server_id'], \
 									self.json_source['servers']['server_{0}'.format(i)]['patch_{num}'.format(num = j)]['order_num'], \
 									self.json_source['servers']['server_{0}'.format(i)]['patch_{num}'.format(num = j)]['patch']))
-			self.__dict__['server_{0}'.format(i)] = patchs_list
-			if not os.path.exists('servers/{folder}'.format(folder = self.__dict__['server_{0}'.format(i)][0][1])):
-				os.makedirs('servers/{folder}'.format(folder = self.__dict__['server_{0}'.format(i)][0][1]))
-			if not os.path.exists('servers/{folder}/{id}.lock'.format(folder = self.__dict__['server_{0}'.format(i)][0][1], id = self.__dict__['server_{0}'.format(i)][0][1])):
-				with open('servers/{folder}/{id}.lock'.format(folder = self.__dict__['server_{0}'.format(i)][0][1], id = self.__dict__['server_{0}'.format(i)][0][1]), 'w') as lock_file:
+			self.servers.append(patchs_list)
+			if not os.path.exists('servers/{folder}'.format(folder = self.servers[i][0][1])):
+				os.makedirs('servers/{folder}'.format(folder = self.servers[i][0][1]))
+			if not os.path.exists('servers/{folder}/{id}.lock'.format(folder = self.servers[i][0][1], id = self.servers[i][0][1])):
+				with open('servers/{folder}/{id}.lock'.format(folder = self.servers[i][0][1], id = self.servers[i][0][1]), 'w') as lock_file:
 					lock_file.write('start')
 				lock_file.close()
 
