@@ -29,7 +29,7 @@ class InstallProc(object):
 			with open('servers/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
    				arr = lock_file.readlines()
 			lock_file.close()
-			server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(', '))
+			server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(','))
 			if server_info[1] == 'PASSED' and (int(server_info[0]) == patch_num or patch_num = -1):
 				return True
 			else:
@@ -38,8 +38,6 @@ class InstallProc(object):
 
 	@staticmethod
 	def get_progress(transaction_id, server_id, order_num):
-		pass
-		# get status for the responce
 		if not os.path.exists('servers/{server_id}.lock'.format(server_id = server_id)):
 			return 'PENDING'
 		else:
