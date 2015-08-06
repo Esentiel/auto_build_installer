@@ -3,6 +3,7 @@ from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
 from controller import InstallProc
+from logger import logg
 import json, sys, os, time
 
 port = 8007
@@ -48,6 +49,7 @@ class BuildConfig(Protocol):
 					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
+					logg(server_installation_obj.__dict__['server_{0}'.format(i)][j])
 					del server_installation_obj.__dict__['server_{0}'.format(i)][j]
 					time.sleep(5)
 					
