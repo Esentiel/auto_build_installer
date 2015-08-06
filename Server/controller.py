@@ -25,12 +25,12 @@ class InstallProc(object):
 				lock_file.close()
 
 
-	def get_status(self, server_id, patch_num):
+	def get_status(self, transaction_id, server_id, patch_num):
 		with open('servers/{server_id}/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
 			arr = lock_file.readlines()
 		lock_file.close()
 		server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(','))
-		if (server_info[1] == 'SUCCESSFUL' and int(server_info[0]) == patch_num) or patch_num == -1:
+		if (server_info[2] == 'SUCCESSFUL' and int(server_info[1]) == patch_num and server_info[0] == transaction_id) or patch_num == -1:
 			return True
 		else:
 			return False
@@ -57,4 +57,4 @@ class InstallProc(object):
 					curr_status = self.__class__.get_progress(self.transaction_id, server_key, self.json_source['servers'][server_key][patch_key]['order_num'])
 					self.json_source['servers'][server_key][patch_key]['status'] = curr_status
 
-		return self.json_source
+		return str(self.json_source).replace('\'','"').replace('u"', '"')

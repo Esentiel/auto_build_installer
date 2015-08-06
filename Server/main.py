@@ -27,14 +27,15 @@ class BuildConfig(Protocol):
 		self.message+=data
 		if '"end": 1}' in self.message:
 			request = json.loads(self.message)
-			server_installation = InstallProc(request)
-			self.run_processes(server_installation)
-			response = server_installation.build_responce()
-			self.transport.write(str(response))
+			self.server_installation = InstallProc(request)
+			self.run_processes(self.server_installation)
+			response = self.server_installation.build_responce()
+			self.transport.write(response)
+			self.message = ''
 		elif '"end": 2}' in self.message:
-			self.run_processes(server_installation)
-			response = server_installation.build_responce()
-			self.transport.write(str(response))
+			self.run_processes(self.server_installation)
+			response = str(self.server_installation.build_responce())
+			self.transport.write(response)
 			
 
 	def run_processes(self, server_installation_obj):
@@ -44,10 +45,9 @@ class BuildConfig(Protocol):
 				server_id = server_installation_obj.servers[i][j][1]
 				patch_num = server_installation_obj.servers[i][j][2]-1
 				patch = server_installation_obj.servers[i][j][3]
-				if server_installation_obj.get_status(server_id, patch_num):
+				if server_installation_obj.get_status(transaction_id, server_id, patch_num):
 					pp = MyPP()
 					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
-					print command
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
 					logg(server_installation_obj.servers[i][j])
