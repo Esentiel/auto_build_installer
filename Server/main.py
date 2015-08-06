@@ -3,11 +3,11 @@ from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
 from controller import InstallProc
-import json, sys
+import json, sys, os, time
 
 port = 8007
 
-class MyPP(protocol.ProcessProtocol):
+class MyPP(ProcessProtocol):
 	def connectionMade(self):
 		self.pid = self.transport.pid
 		print "connectionMade {pid}".format(pid = self.pid)
@@ -28,22 +28,22 @@ class BuildConfig(Protocol):
 			request = json.loads(self.message)
 			server_installation = InstallProc(request)
 			self.run_processes(server_installation)
-			response = InstallProc.build_responce()
-			self.transport.write(response)
+			response = server_installation.build_responce()
+			self.transport.write(str(response))
 
 	def run_processes(self, server_installation_obj):
 		for i in xrange(server_installation_obj.servers_num):
-			for j in xrange(len(server_installation_obj['servers']['server_{0}'.format(i)])):
-				command.extend(to_list(server_installation_obj['servers']['server_{0}'.format(i)][j]))
-				# <TBD>
-				transaction_id = server_installation_obj['server_{0}'.format(i)][j][0]
-				server_id = server_installation_obj['server_{0}'.format(i)][j][1]
-				patch_num = server_installation_obj['server_{0}'.format(i)][j][2]-1
+			for j in xrange(len(server_installation_obj.__dict__['server_{0}'.format(i)])):
+				transaction_id = server_installation_obj.__dict__['server_{0}'.format(i)][j][0]
+				server_id = server_installation_obj.__dict__['server_{0}'.format(i)][j][1]
+				patch_num = server_installation_obj.__dict__['server_{0}'.format(i)][j][2]-1
+				patch = server_installation_obj.__dict__['server_{0}'.format(i)][j][3]
 				if server_installation_obj.get_status(server_id, patch_num):
 					pp = MyPP()
-					command = ['C:\Python27\python.exe','installer.py']
+					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
+					time.sleep(5)
 					
 
 class BCFactory(Factory):
