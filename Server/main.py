@@ -30,6 +30,11 @@ class BuildConfig(Protocol):
 			self.run_processes(server_installation)
 			response = server_installation.build_responce()
 			self.transport.write(str(response))
+		elif '"end": 2}' in self.message:
+			self.run_processes(server_installation)
+			response = server_installation.build_responce()
+			self.transport.write(str(response))
+			
 
 	def run_processes(self, server_installation_obj):
 		for i in xrange(server_installation_obj.servers_num):
@@ -43,6 +48,7 @@ class BuildConfig(Protocol):
 					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
+					del server_installation_obj.__dict__['server_{0}'.format(i)][j]
 					time.sleep(5)
 					
 
