@@ -32,11 +32,8 @@ class InstProtocol(Protocol):
 																									status = response['servers'][server_key][patch_key]['status'])
 
 						stdout.write(server_string)
-			if 'PENDING' not in self.message:
-				self.transport.loseConnection()
-			else:
-				time.sleep(30)
-				self.sendMsg()
+			time.sleep(30)
+			self.sendMsg()
 			self.message = ''
 
 	def sendMsg(self):
