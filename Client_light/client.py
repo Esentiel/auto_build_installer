@@ -1,62 +1,10 @@
-# import socket, json, time, sys
-
-# HOST = 'localhost'    # The remote host
-# PORT = 8007              # The same port as used by the server
-# s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# # s.setblocking(0)
-# s.connect((HOST, PORT))
-
-
-# with open('install_qeue.json', 'r') as json_file:
-# 	# json_data = json.load(json_file)
-# 	json_data = json_file.read()
-# json_file.close()
-# s.sendall(str(json_data))
-# # while True:
-# # 	s.sendall(str(json_data))
-# # 	response = ''
-# # 	while True:
-# # 		try:
-# # 			response += s.recv(1024)
-# # 			if '"end": 1}' in response:
-# # 				print response
-# # 				break
-# # 		except socket.timeout, e:
-# # 			if err == 'timed out':
-# # 				time.sleep(1)
-# # 				print 'recv timed out, retry later'
-# # 				continue
-# # 			else:
-# # 				print e
-# # 				sys.exit(1)
-# # 		except socket.error, e:
-# # 			# Something else happened, handle error, exit, etc.
-# # 			print e
-# # 			sys.exit(1)
-# # 		else:
-# # 			if len(response) == 0:
-# # 				print 'orderly shutdown on server end'
-# # 				sys.exit(0)
-
-# # 	if 'PENDING' not in response:
-# # 		print "Everythis was done!"
-# # 		break
-# # 	else:
-# # 		time.sleep(5)
-# time.sleep(30)
-
-
-# json_data = json_data.replace('"end": 1', '"end": 2')
-
-# s.sendall(str(json_data))
-###############################
 from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet import task
 from sys import stdout
 from twisted.internet import reactor
 import time, json, re
 
-host = 'localhost'
+host = 'vm-bee.netcracker.com'
 port = 8007
 
 class InstProtocol(Protocol):

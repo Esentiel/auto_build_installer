@@ -21,7 +21,7 @@ class InstallProc(object):
 				os.makedirs('servers/{folder}'.format(folder = self.servers[i][0][1]))
 			if not os.path.exists('servers/{folder}/{id}.lock'.format(folder = self.servers[i][0][1], id = self.servers[i][0][1])):
 				with open('servers/{folder}/{id}.lock'.format(folder = self.servers[i][0][1], id = self.servers[i][0][1]), 'w') as lock_file:
-					lock_file.write('start')
+					lock_file.write('test,0,test')
 				lock_file.close()
 
 
@@ -43,7 +43,6 @@ class InstallProc(object):
 		lock_file.close()
 		arr = [item.split(',') for item in arr]
 		for i in xrange(len(arr)-1, -1, -1):
-			print arr[i]
 			if transaction_id == arr[i][0] and order_num == int(arr[i][1]):
 				return arr[i][2]
 				break

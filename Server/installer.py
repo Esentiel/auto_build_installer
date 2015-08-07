@@ -15,7 +15,10 @@ with open('servers/{instnc}/{instnc}.lock'.format(instnc = instance_name),'a') a
     log_file.write('{trans_id},{ord_num},IN PROGRESS\n'.format(trans_id = transaction_id,ord_num = order_num))
 log_file.close()
 
+
+
 call(["robocopy", "\\\\vm-bee.netcracker.com\config",".", "config.json"])
+
 
 instance = Instance(instance_name)
 db_user = str(instance_name.upper())
@@ -26,14 +29,18 @@ m = re.match('.*_(.*)_.*', instance_name)
 server_id = m.group(1)
 ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_{server}".format(server = server_id))
 
+
 m = re.search('(.*)/(.*)', patch)
-patch_SMB = str(m.group(1)).replace('ftp.netcracker.com/ftp','\\\\ftp.netcracker.com\\ftp').replace('/','\\')
+patch_SMB = str(m.group(1)).replace('ftp.netcracker.com/ftp/','')
 patch_name =  str(m.group(2))
 
-call(["robocopy", \
-      patch_SMB, \
-      "servers/{inst}".format(inst = instance_name), \
-      patch_name])
+client_ftp = paramiko.SSHClient()
+client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=21)
+sftp_ftp = client_ftp.open_sftp()
+
+sftp_ftp.get(patch_SMB+'/'+patch_name, 'servers/{server}/{patch}'.format(sever = instance_name, patch = patch_name))
+client_ftp.close()
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
