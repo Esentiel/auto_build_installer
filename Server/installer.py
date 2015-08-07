@@ -12,7 +12,7 @@ order_num = sys.argv[3]
 patch = sys.argv[4]
 
 with open('servers/{instnc}/{instnc}.lock'.format(instnc = instance_name),'a') as log_file:
-    log_file.write('{trans_id},{ord_num},PENDING\n'.format(trans_id = transaction_id,ord_num = order_num))
+    log_file.write('{trans_id},{ord_num},IN PROGRESS\n'.format(trans_id = transaction_id,ord_num = order_num))
 log_file.close()
 
 call(["robocopy", "\\\\vm-bee.netcracker.com\config",".", "config.json"])
@@ -22,7 +22,9 @@ db_user = str(instance_name.upper())
 app_host = str(instance.app_host)
 ssh_user = 'netcrk'
 ssh_port = int(instance.ssh_port)
-ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_q051")
+m = re.match('.*_(.*)_.*', instance_name)
+server_id = m.group(1)
+ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_{server}".format(server = server_id))
 
 m = re.search('(.*)/(.*)', patch)
 patch_SMB = str(m.group(1)).replace('ftp.netcracker.com/ftp','\\\\ftp.netcracker.com\\ftp').replace('/','\\')
@@ -70,3 +72,4 @@ while True:
 client.close()
 
 os.remove('servers/{instnc}/{patch}'.format(instnc = instance_name, patch = patch_name))
+# os.remove('config.json')

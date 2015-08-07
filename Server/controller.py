@@ -38,23 +38,22 @@ class InstallProc(object):
 
 	@staticmethod
 	def get_progress(transaction_id, server_id, order_num):
-		if not os.path.exists('servers/{server_id}.lock'.format(server_id = server_id)):
-			return 'PENDING'
-		else:
-			with open('servers/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
-				arr = lock_file.readlines()
-			lock_file.close()
-			for i in xrange(len(arr), -1, -1):
-				if transaction_id == arr[i][0] and order_num == arr[i][1]:
-					return arr[i][2]
-					break
-			return 'PENDING'
+		with open('servers/{server_id}/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
+			arr = lock_file.readlines()
+		lock_file.close()
+		arr = [item.split(',') for item in arr]
+		for i in xrange(len(arr)-1, -1, -1):
+			print arr[i]
+			if transaction_id == arr[i][0] and order_num == int(arr[i][1]):
+				return arr[i][2]
+				break
+		return 'PENDING'
 
 	def build_responce(self):
 		for server_key in self.json_source['servers'].keys():
 			for patch_key in self.json_source['servers'][server_key].keys():
 				if 'patch' in patch_key:
-					curr_status = self.__class__.get_progress(self.transaction_id, server_key, self.json_source['servers'][server_key][patch_key]['order_num'])
+					curr_status = self.__class__.get_progress(self.transaction_id, self.json_source['servers'][server_key]['server_id'], self.json_source['servers'][server_key][patch_key]['order_num'])
 					self.json_source['servers'][server_key][patch_key]['status'] = curr_status
 
 		return str(self.json_source).replace('\'','"').replace('u"', '"')
