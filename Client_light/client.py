@@ -2,7 +2,7 @@ from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet import task
 from sys import stdout
 from twisted.internet import reactor
-import time, json, re
+import time, json, re, uuid
 
 host = 'vm-bee.netcracker.com'
 port = 8007
@@ -12,7 +12,7 @@ class InstProtocol(Protocol):
 
 	def __init__(self):
 		with open('install_qeue.json','r') as jsonfile:
-			self.json_data = jsonfile.read()
+			self.json_data = str(jsonfile.read()).replace('pure_fckn_random_uid',str(uuid.uuid4()))
 		jsonfile.close()
 		self.json_data_status = self.json_data.replace('"end": 1', '"end": 2')
 
