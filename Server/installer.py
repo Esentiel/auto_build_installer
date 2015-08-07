@@ -50,8 +50,8 @@ sftp = client.open_sftp()
 sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_name), \
     '/netcracker/config/{inctnc}/{file}'.format(inctnc = instance_name, file = patch_name))
 
-# command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
-# client.exec_command(command)
+command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
+client.exec_command(command)
 time.sleep(5)
 command = 'tail -100 /netcracker/config/{instnc}/installer_logs/installer.log'.format(instnc = instance_name)
 in_progress = False
