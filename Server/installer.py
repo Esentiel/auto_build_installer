@@ -36,10 +36,10 @@ patch_name =  str(m.group(2))
 
 client_ftp = paramiko.SSHClient()
 client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=21)
+client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
 sftp_ftp = client_ftp.open_sftp()
 
-sftp_ftp.get(patch_SMB+'/'+patch_name, 'servers/{server}/{patch}'.format(sever = instance_name, patch = patch_name))
+sftp_ftp.get(patch_SMB+'/'+patch_name, 'servers/{server}/{patch}'.format(server = instance_name, patch = patch_name))
 client_ftp.close()
 
 client = paramiko.SSHClient()
