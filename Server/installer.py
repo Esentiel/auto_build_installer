@@ -5,6 +5,9 @@ from instance import Instance
 import re
 import sys
 import os
+# List of the future changes:
+# 1 use OOP 
+
 
 transaction_id = sys.argv[1]
 instance_name = sys.argv[2]
