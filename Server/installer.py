@@ -67,3 +67,5 @@ while True:
         time.sleep(30)
 
 client.close()
+
+os.remove('servers/{instnc}/{patch}'.format(instnc = instance_name, patch = patch_name))
