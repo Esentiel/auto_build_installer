@@ -50,28 +50,52 @@
 
 # s.sendall(str(json_data))
 ###############################
+from twisted.internet.protocol import Protocol, ClientFactory
+from twisted.internet import task
+from sys import stdout
+from twisted.internet import reactor
 
 host = 'localhost'
 port = 8007
 
-from twisted.internet import reactor, task
-from twisted.internet.protocol import Protocol
-from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+class InstProtocol(Protocol):
+	def __init__(self):
+		with open('install_qeue.json','r') as jsonfile:
+			self.json_data = jsonfile.read()
+		jsonfile.close()
+		self.json_data_status = self.json_data.replace('"end": 1', '"end": 2')
 
-class InstallProtocol(Protocol):
-	def sendMessage(self, msg):
-		self.transport.write(msg)
+	def connectionMade(self):
+		self.transport.write(self.json_data)
 
-def gotProtocol(p):
-	with open('install_qeue.json', 'r') as json_file:
-		json_data = json_file.read()
-	json_file.close()
+	def dataReceived(self, data):
+		stdout.write(data)
 
-	p.sendMessage(json_data)
-	l = task.LoopingCall(p.sendMessage, json_data.replace('"end": 1', '"end": 2'))
-	l.start(1.0)
+	def sendMsg(self):
+		self.transport.write(self.json_data_status)
 
-point = TCP4ClientEndpoint(reactor, host, port)
-d = connectProtocol(point, InstallProtocol())
-d.addCallback(gotProtocol)
+class InstFactory(ClientFactory):
+	protocol = InstProtocol
+
+	def __init__(self):
+		self.lc = task.LoopingCall(self.buildProtocol([host, port]).sendMsg)
+		self.lc.start(10)
+
+	def buildProtocol(self, addr):
+		return InstProtocol()
+
+	def startedConnecting(self, connector):
+		print 'Started to connect.'
+
+	def buildProtocol(self, addr):
+		print 'Connected.'
+		return InstProtocol()
+
+	def clientConnectionLost(self, connector, reason):
+		print 'Lost connection.  Reason:', reason
+
+	def clientConnectionFailed(self, connector, reason):
+		print 'Connection failed. Reason:', reason
+
+reactor.connectTCP(host, port, InstFactory())
 reactor.run()

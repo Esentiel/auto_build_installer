@@ -4,6 +4,7 @@ from subprocess import call
 from instance import Instance
 import re
 import sys
+import os
 
 transaction_id = sys.argv[1]
 instance_name = sys.argv[2]
