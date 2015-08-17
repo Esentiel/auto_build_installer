@@ -1,0 +1,94 @@
+from Tkinter import *
+from twisted.internet import tksupport, reactor
+
+root = Tk()
+
+# Install the Reactor support
+tksupport.install(root)
+
+# at this point build Tk app as usual using the root object,
+# and start the program with "reactor.run()", and stop it
+# with "reactor.stop()".
+
+
+# from twisted.internet.protocol import Protocol, ClientFactory
+# from twisted.internet import task
+# from sys import stdout
+# from twisted.internet import reactor
+import time, json, re, uuid
+
+host = 'vm-bee.netcracker.com'
+port = 8007
+
+# class InstProtocol(Protocol):
+# 	message = ''
+
+# 	def __init__(self):
+# 		with open('install_qeue.json','r') as jsonfile:
+# 			self.json_data = str(jsonfile.read()).replace('pure_fckn_random_uid',str(uuid.uuid4()))
+# 		jsonfile.close()
+# 		self.json_data_status = self.json_data.replace('"end": 1', '"end": 2')
+
+# 	# def connectionMade(self):
+# 	# 	self.transport.write(self.json_data)
+
+# 	def dataReceived(self, data):
+# 		self.message += data
+# 		if '"end"' in self.message:
+# 			response = json.loads(self.message)
+# 			stdout.write('\n\n\n')
+# 			for server_key in response['servers'].keys():
+# 				for patch_key in response['servers'][server_key].keys():
+# 					if 'patch' in patch_key:
+# 						server_string =  'Server: {server_id}\tPatch: {patch_name}\t Status: {status}\n'.format(server_id = response['servers'][server_key]['server_id'],\
+# 																									patch_name = re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1),\
+# 																									status = response['servers'][server_key][patch_key]['status'])
+
+# 						stdout.write(server_string)
+# 			time.sleep(30)
+# 			self.sendMsg()
+# 			self.message = ''
+
+# 	def sendMsg(self):
+# 		self.transport.write(self.json_data)
+
+# from twisted.internet import reactor
+from twisted.internet.protocol import Protocol
+from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+
+class Greeter(Protocol):
+	def __init__(self):
+		with open('install_qeue.json','r') as jsonfile:
+			self.json_data = str(jsonfile.read()).replace('pure_fckn_random_uid',str(uuid.uuid4()))
+		jsonfile.close()
+		self.json_data_status = self.json_data.replace('"end": 1', '"end": 2')
+
+	def sendMsg(self):
+		self.transport.write(self.json_data)
+
+def gotProtocol(p):
+    p.sendMsg()
+    # reactor.callLater(1, p.sendMsg)
+    # reactor.callLater(2, p.transport.loseConnection)
+
+
+
+
+
+
+# use width x height + x_offset + y_offset (no spaces!)
+root.geometry("%dx%d+%d+%d" % (800, 600, 200, 150))
+root.title("auto-installer-tool")
+
+def buttons(d):
+	button = Button(root, text="start", command=d.addCallback(gotProtocol))
+	button.pack(side='left', padx=20, pady=10)
+
+
+
+# reactor.connectTCP(host, port, InstFactory())
+point = TCP4ClientEndpoint(reactor, host, port)
+d = connectProtocol(point, Greeter())
+buttons(d)
+# d.addCallback(gotProtocol)
+reactor.run()
