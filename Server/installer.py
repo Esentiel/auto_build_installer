@@ -27,7 +27,8 @@ ssh_user = 'netcrk'
 ssh_port = int(instance.ssh_port)
 m = re.match('.*_(.*)_.*', instance_name)
 server_id = m.group(1)
-ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_{server}".format(server = server_id))
+if app_host == 'qaapp051.netcracker.com':
+    ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_{server}".format(server = server_id))
 
 
 m = re.search('(.*)/(.*)', patch)
@@ -44,7 +45,10 @@ client_ftp.close()
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(hostname=app_host, username=ssh_user, pkey=ssh_key, port=ssh_port)
+if app_host == 'qaapp051.netcracker.com':
+    client.connect(hostname=app_host, username=ssh_user, pkey=ssh_key, port=ssh_port)
+elif app_host == 'devapp088.netcracker.com':
+    client.connect(hostname=app_host, username=ssh_user, password='crknet', port=ssh_port)
 
 sftp = client.open_sftp()
 sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_name), \
