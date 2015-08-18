@@ -1,6 +1,10 @@
-# JSON part
+
 import uuid
 import json
+from Tkinter import *
+import paramiko
+
+
 class JsonGenerator(object):
 	"""docstring for JsonGenerator"""
 	def __init__(self):
@@ -42,10 +46,6 @@ class JsonGenerator(object):
 	def get_server_num_exactly(self):
 		curr_num = len([server for server in self.json_dict['servers'].keys() if 'server_' in server])
 		return curr_num
-
-# GUI part
-from Tkinter import *
-import paramiko
 
 class Application(Frame):
 
@@ -157,10 +157,3 @@ class Application(Frame):
 			json_obj.add_patch(server_num, patch_order_num, patch)
 		client_ftp.close()
 		json_obj.dump_to_file()
-
-
-root = Tk()
-root.geometry("1024x860")
-app = Application(master=root)
-app.mainloop()
-root.destroy()
