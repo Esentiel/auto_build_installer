@@ -19,6 +19,7 @@ class InstProtocol(Protocol):
 	def connectionMade(self):
 		self.transport.write(self.json_data)
 
+
 	def dataReceived(self, data):
 		self.message += data
 		if '"end"' in self.message:
@@ -32,12 +33,15 @@ class InstProtocol(Protocol):
 																									status = response['servers'][server_key][patch_key]['status'])
 
 						stdout.write(server_string)
-			time.sleep(30)
+			# time.sleep(30)
 			self.sendMsg()
 			self.message = ''
 
 	def sendMsg(self):
 		self.transport.write(self.json_data_status)
+
+	def sendMessage(self):
+		self.transport.write(self.json_data)
 
 class InstFactory(ClientFactory):
 	protocol = InstProtocol
@@ -51,5 +55,6 @@ class InstFactory(ClientFactory):
 	def clientConnectionFailed(self, connector, reason):
 		print 'Connection failed. Reason:', reason
 
-reactor.connectTCP(host, port, InstFactory())
-reactor.run()
+	def __init__(self, app):
+		self.app = app
+

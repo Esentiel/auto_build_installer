@@ -157,3 +157,7 @@ class Application(Frame):
 			json_obj.add_patch(server_num, patch_order_num, patch)
 		client_ftp.close()
 		json_obj.dump_to_file()
+
+
+	def update_status(self):
+		pass
