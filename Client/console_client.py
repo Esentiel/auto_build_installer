@@ -1,4 +1,5 @@
 from twisted.internet.protocol import Protocol, ClientFactory
+from twisted.internet import defer
 from twisted.internet import task
 from sys import stdout
 from twisted.internet import reactor
@@ -20,6 +21,9 @@ class InstProtocol(Protocol):
 		self.transport.write(self.json_data)
 
 	def dataReceived(self, data):
+		self.factory.reactor.callLater(30, self.build_log, data)
+
+	def build_log(self, data):
 		self.message += data
 		if '"end"' in self.message:
 			response = json.loads(self.message)
@@ -32,7 +36,7 @@ class InstProtocol(Protocol):
 																									status = response['servers'][server_key][patch_key]['status'])
 
 						stdout.write(server_string)
-			time.sleep(30)
+			# time.sleep(30)
 			self.sendMsg()
 			self.message = ''
 
@@ -41,6 +45,9 @@ class InstProtocol(Protocol):
 
 class InstFactory(ClientFactory):
 	protocol = InstProtocol
+
+	def __init__(self, reactor):
+		self.reactor = reactor
 
 	def startedConnecting(self, connector):
 		print 'Started to connect.'
@@ -51,5 +58,5 @@ class InstFactory(ClientFactory):
 	def clientConnectionFailed(self, connector, reason):
 		print 'Connection failed. Reason:', reason
 
-reactor.connectTCP(host, port, InstFactory())
+reactor.connectTCP(host, port, InstFactory(reactor))
 reactor.run()
