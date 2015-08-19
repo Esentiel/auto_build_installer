@@ -1,8 +1,6 @@
 from twisted.internet.protocol import Protocol, ClientFactory
-from twisted.internet import task
 from sys import stdout
-from twisted.internet import reactor
-import time, json, re, uuid
+import json, re
 
 host = 'vm-bee.netcracker.com'
 port = 8007
@@ -19,32 +17,36 @@ class InstProtocol(Protocol):
 	def connectionMade(self):
 		self.transport.write(self.json_data)
 
-
 	def dataReceived(self, data):
+		self.factory.reactor.callLater(5, self.build_log, data)
+
+	def build_log(self, data):
 		self.message += data
 		if '"end"' in self.message:
+			the_response = []
 			response = json.loads(self.message)
-			stdout.write('\n\n\n')
 			for server_key in response['servers'].keys():
 				for patch_key in response['servers'][server_key].keys():
 					if 'patch' in patch_key:
-						server_string =  'Server: {server_id}\tPatch: {patch_name}\t Status: {status}\n'.format(server_id = response['servers'][server_key]['server_id'],\
-																									patch_name = re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1),\
-																									status = response['servers'][server_key][patch_key]['status'])
+						the_row = {}
+						the_row['server_id'] = response['servers'][server_key]['server_id']
+						the_row['patch'] = str(re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1)).replace('_autoinstaller.zip', '')
+						the_row['status'] = response['servers'][server_key][patch_key]['status']
+						the_response.append(the_row)
+			self.factory.responce_callback(the_response)
 
-						stdout.write(server_string)
-			# time.sleep(30)
 			self.sendMsg()
 			self.message = ''
 
 	def sendMsg(self):
 		self.transport.write(self.json_data_status)
 
-	def sendMessage(self):
-		self.transport.write(self.json_data)
-
 class InstFactory(ClientFactory):
 	protocol = InstProtocol
+
+	def __init__(self, reactor, responce_callback):
+		self.reactor = reactor
+		self.responce_callback = responce_callback
 
 	def startedConnecting(self, connector):
 		print 'Started to connect.'
@@ -54,7 +56,4 @@ class InstFactory(ClientFactory):
 
 	def clientConnectionFailed(self, connector, reason):
 		print 'Connection failed. Reason:', reason
-
-	def __init__(self, app):
-		self.app = app
 
