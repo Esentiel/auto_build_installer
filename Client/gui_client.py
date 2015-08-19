@@ -1,6 +1,8 @@
-# JSON part
-import uuid
-import json
+import uuid, json, sys, paramiko
+from Tkinter import *
+from console_client import InstProtocol, InstFactory, host, port
+from twisted.internet import reactor
+
 class JsonGenerator(object):
 	"""docstring for JsonGenerator"""
 	def __init__(self):
@@ -43,10 +45,6 @@ class JsonGenerator(object):
 		curr_num = len([server for server in self.json_dict['servers'].keys() if 'server_' in server])
 		return curr_num
 
-# GUI part
-from Tkinter import *
-import paramiko
-
 class Application(Frame):
 
 	@classmethod
@@ -82,11 +80,17 @@ class Application(Frame):
 		patch = apply(OptionMenu, (self, var_patch, ()))
 		patch.grid(row=order+1, column=4, pady=5, padx = 5)
 
+		var_status = StringVar()
+		label = Label( self, textvariable=var_status, relief=RAISED )
+		var_status.set("PLANNED")
+		label.grid(row=order+1, column=5, pady=5, padx = 5)
+
 		the_row = {}
 		the_row['server_id'] = var_server
 		the_row['deliverable'] = var_deliverable
 		the_row['var_patch'] = var_patch
 		the_row['patch'] = patch
+		the_row['status'] = var_status
 		self.qeue.append(the_row)
 
 		self.order+=1
@@ -124,9 +128,17 @@ class Application(Frame):
 		start_button.grid(row=0, column=0, pady=5, padx = 15)
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
 		new_button.grid(row=1, column=0, pady=5, padx = 30)
-		
-	def __init__(self, master=None):
+	
+	def create_client(self):
+		self.client = InstFactory(self.reactor, self.update_status)
+
+	def __init__(self, reactor, master=None):
 		Frame.__init__(self, master)
+		try:
+			sys.remove('install_qeue.json')
+		except:
+			pass
+		self.reactor = reactor
 		self.qeue = []
 		self.order = 0
 		Application.get_servers_list()
@@ -134,6 +146,11 @@ class Application(Frame):
 		self.grid(row=0, column=0)
 		self.create_new_button()
 		self.createWidgets()
+		self.create_client()
+
+	def connect_client(self):
+		self.reactor.connectTCP(host, port, self.client)
+
 
 	def generate_json(self):
 		client_ftp = paramiko.SSHClient()
@@ -158,9 +175,11 @@ class Application(Frame):
 		client_ftp.close()
 		json_obj.dump_to_file()
 
+		self.connect_client()
 
-root = Tk()
-root.geometry("1024x860")
-app = Application(master=root)
-app.mainloop()
-root.destroy()
+
+	def update_status(self, response):
+		for i in xrange(len(response)):
+			for j in xrange(len(self.qeue)):
+				if response[i]['server_id'] == self.qeue[j]['server_id'].get() and response[i]['patch'] == self.qeue[j]['var_patch'].get():
+					self.qeue[j]['status'].set(response[i]['status'])
