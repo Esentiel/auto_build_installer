@@ -2,6 +2,7 @@ import uuid, json, sys, paramiko
 from Tkinter import *
 from console_client import InstProtocol, InstFactory, host, port
 from twisted.internet import reactor
+from PIL import ImageTk, Image
 
 class JsonGenerator(object):
 	"""docstring for JsonGenerator"""
@@ -59,7 +60,8 @@ class Application(Frame):
 		client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 		client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
 		sftp_ftp = client_ftp.open_sftp()
-		cls.deliverables_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
+		deliverables_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
+		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
 		client_ftp.close()
 
 	def createWidgets(self, order=0):
@@ -113,7 +115,10 @@ class Application(Frame):
 		try:
 			patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = deliverable))
 		except:
-			patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = deliverable))
+			try:
+				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = deliverable))
+			except:
+				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = deliverable))
 		client_ftp.close()
 		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 
@@ -128,7 +133,11 @@ class Application(Frame):
 								 command=lambda value=string:
 									  self.qeue[order]['var_patch'].set(value))
 		else:
-			for i in xrange(11):
+			if len(options)< 11:
+				the_len = len(options)
+			else:
+				the_len = 11
+			for i in xrange(the_len):
 				menu.add_command(label=options[i], 
 								 command=lambda value=options[i]:
 									  self.qeue[order]['var_patch'].set(value))
@@ -162,8 +171,10 @@ class Application(Frame):
 		Application.get_deliverables_list()
 		self.grid(row=0, column=0)
 		self.create_new_button()
-		self.createWidgets()
 		self.create_client()
+		self.createWidgets()
+		self.put_girl_on()
+		
 
 	def connect_client(self):
 		self.connection = self.reactor.connectTCP(host, port, self.client)
@@ -192,13 +203,25 @@ class Application(Frame):
 				sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
 				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
 			except:
-				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
-				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
+				try:
+					patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
+					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
+				except:
+					patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
+					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch)
 		client_ftp.close()
 		json_obj.dump_to_file()
 
 		self.connect_client()
+
+	def put_girl_on(self):
+		img_frame = Frame(self.master)
+		img_frame.grid(row=4, column=0)
+		img = ImageTk.PhotoImage(Image.open("girl.jpg"))
+		panel = Label(img_frame, image = img)
+		panel.image = img
+		panel.grid(row=0, column=0)
 
 
 	def update_status(self, response):
