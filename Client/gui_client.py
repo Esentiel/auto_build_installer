@@ -64,7 +64,10 @@ class Application(Frame):
 
 	def createWidgets(self, order=0):
 		var_server = StringVar(self)
-		var_server.set(self.servers_list[0])
+		if order == 0:
+			var_server.set(self.servers_list[0])
+		else:
+			var_server.set(self.qeue[order-1]['server_id'].get())
 		server = apply(OptionMenu, (self, var_server) + tuple(self.servers_list))
 		server.grid(row=order+1, column=1, pady=5, padx = 5)
 
@@ -73,17 +76,20 @@ class Application(Frame):
 		deliverable = apply(OptionMenu, (self, var_deliverable) + tuple(self.deliverables_list))
 		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
 
-		calc_button = Button(self, text="ci_builds", width=8, command=lambda order = order: self.build_patchs_list(order))
+		calc_button = Button(self, text="ci_builds", width=8, command=lambda order = order: self.build_patchs_list(order, light=True))
 		calc_button.grid(row=order+1, column=3, pady=5, padx = 5)
 		
 		var_patch = StringVar(self)
 		patch = apply(OptionMenu, (self, var_patch, ()))
 		patch.grid(row=order+1, column=4, pady=5, padx = 5)
 
+		calc_button = Button(self, text="more", width=8, command=lambda order = order: self.build_patchs_list(order, light=False))
+		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
+
 		var_status = StringVar()
 		label = Label( self, textvariable=var_status, relief=RAISED )
 		var_status.set("PLANNED")
-		label.grid(row=order+1, column=5, pady=5, padx = 5)
+		label.grid(row=order+1, column=6, pady=5, padx = 5)
 
 		the_row = {}
 		the_row['server_id'] = var_server
@@ -98,7 +104,7 @@ class Application(Frame):
 	def get_deliverable_selected(self, order=0):
 		return self.qeue[order]['deliverable'].get()
 
-	def build_patchs_list(self, order=0):
+	def build_patchs_list(self, order=0, light=False):
 		deliverable = self.get_deliverable_selected(order)
 		client_ftp = paramiko.SSHClient()
 		client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -111,21 +117,31 @@ class Application(Frame):
 		client_ftp.close()
 		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 
-		self._reset_option_menu(patches_list, order, 0)
+		self._reset_option_menu(patches_list, order, 0, light)
 
-	def _reset_option_menu(self, options, order=0, index=None):
+	def _reset_option_menu(self, options, order=0, index=None, light=False):
 		menu = self.qeue[order]['patch']["menu"]
 		menu.delete(0, "end")
-		for string in options:
-			menu.add_command(label=string, 
-							 command=lambda value=string:
-								  self.qeue[order]['var_patch'].set(value))
+		if not light:
+			for string in options:
+				menu.add_command(label=string, 
+								 command=lambda value=string:
+									  self.qeue[order]['var_patch'].set(value))
+		else:
+			for i in xrange(11):
+				menu.add_command(label=options[i], 
+								 command=lambda value=options[i]:
+									  self.qeue[order]['var_patch'].set(value))
 		if index is not None:
 			self.qeue[order]['var_patch'].set(options[index])
 
 	def create_new_button(self):
-		start_button = Button(self, text="Start", width=12, command=lambda: self.generate_json())
-		start_button.grid(row=0, column=0, pady=5, padx = 15)
+		start_button = Button(self, text="Start", width=12, command=self.generate_json)
+		start_button.grid(row=0, column=0, pady=15, padx = 15)
+		stop_button = Button(self, text="Stop", width=12, command=self.close_connection)
+		stop_button.grid(row=0, column=1, pady=15, padx = 15)
+		reset_button = Button(self, text="Reset", width=12, command=lambda: self.reinit(self.reactor, self.master))
+		reset_button.grid(row=0, column=2, pady=15, padx = 15)
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
 		new_button.grid(row=1, column=0, pady=5, padx = 30)
 	
@@ -133,6 +149,7 @@ class Application(Frame):
 		self.client = InstFactory(self.reactor, self.update_status)
 
 	def __init__(self, reactor, master=None):
+		self.master = master
 		Frame.__init__(self, master)
 		try:
 			sys.remove('install_qeue.json')
@@ -149,7 +166,13 @@ class Application(Frame):
 		self.create_client()
 
 	def connect_client(self):
-		self.reactor.connectTCP(host, port, self.client)
+		self.connection = self.reactor.connectTCP(host, port, self.client)
+
+	def close_connection(self):
+		self.connection.disconnect()
+
+	def reinit(self, reactor, master=None):
+		self.__init__(self.reactor, self.master)
 
 
 	def generate_json(self):
