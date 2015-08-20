@@ -5,6 +5,9 @@ from instance import Instance
 import re
 import sys
 import os
+# List of the future changes:
+# 1 use OOP 
+
 
 transaction_id = sys.argv[1]
 instance_name = sys.argv[2]
@@ -56,7 +59,7 @@ sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_na
 
 command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 client.exec_command(command)
-time.sleep(5)
+time.sleep(15)
 command = 'tail -100 /netcracker/config/{instnc}/installer_logs/installer.log'.format(instnc = instance_name)
 in_progress = False
 while True:
