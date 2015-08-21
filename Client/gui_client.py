@@ -3,6 +3,7 @@ from Tkinter import *
 from console_client import InstProtocol, InstFactory, host, port
 from twisted.internet import reactor
 from PIL import ImageTk, Image
+import threading, Queue
 
 class JsonGenerator(object):
 	"""docstring for JsonGenerator"""
@@ -48,11 +49,14 @@ class JsonGenerator(object):
 
 class Application(Frame):
 
+	threading_queue = Queue.Queue()
+
 	@classmethod
 	def get_servers_list(cls):
 		with open('\\\\vm-bee.netcracker.com\config\list.txt', 'r') as the_config:
 			cls.servers_list = the_config.read().replace('instance_id=','').split(',')
 		the_config.close()
+		cls.threading_queue.put(threading.currentThread().getName(), 'done')
 
 	@classmethod
 	def get_deliverables_list(cls):
@@ -63,8 +67,13 @@ class Application(Frame):
 		deliverables_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
 		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
 		client_ftp.close()
+		cls.threading_queue.put(threading.currentThread().getName(), 'done')
 
 	def createWidgets(self, order=0):
+		self.threading_queue.get()
+		self.threading_queue.get()
+
+		
 		var_server = StringVar(self)
 		if order == 0:
 			var_server.set(self.servers_list[0])
@@ -78,14 +87,14 @@ class Application(Frame):
 		deliverable = apply(OptionMenu, (self, var_deliverable) + tuple(self.deliverables_list))
 		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
 
-		calc_button = Button(self, text="ci_builds", width=8, command=lambda order = order: self.build_patchs_list(order, light=True))
+		calc_button = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, True)).start())
 		calc_button.grid(row=order+1, column=3, pady=5, padx = 5)
 		
 		var_patch = StringVar(self)
 		patch = apply(OptionMenu, (self, var_patch, ()))
 		patch.grid(row=order+1, column=4, pady=5, padx = 5)
 
-		calc_button = Button(self, text="more", width=8, command=lambda order = order: self.build_patchs_list(order, light=False))
+		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, False)).start())
 		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
 
 		var_status = StringVar()
@@ -145,11 +154,11 @@ class Application(Frame):
 			self.qeue[order]['var_patch'].set(options[index])
 
 	def create_new_button(self):
-		start_button = Button(self, text="Start", width=12, command=self.generate_json)
+		start_button = Button(self, text="Start", width=12, command=lambda: threading.Thread(target=self.generate_json).start())
 		start_button.grid(row=0, column=0, pady=15, padx = 15)
 		stop_button = Button(self, text="Stop", width=12, command=self.close_connection)
 		stop_button.grid(row=0, column=1, pady=15, padx = 15)
-		reset_button = Button(self, text="Reset", width=12, command=lambda: self.reinit(self.reactor, self.master))
+		reset_button = Button(self, text="Reset", width=12, command=lambda: threading.Thread(target=self.reinit, args=(self.reactor, self.master)).start())
 		reset_button.grid(row=0, column=2, pady=15, padx = 15)
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
 		new_button.grid(row=1, column=0, pady=5, padx = 30)
@@ -167,8 +176,14 @@ class Application(Frame):
 		self.reactor = reactor
 		self.qeue = []
 		self.order = 0
-		Application.get_servers_list()
-		Application.get_deliverables_list()
+		get_servers_thread = threading.Thread(name='server_list', target=Application.get_servers_list)
+		get_servers_thread.daemon=True
+		get_servers_thread.start()
+		get_deliv_thread = threading.Thread(name='deliv_list', target=Application.get_deliverables_list)
+		get_deliv_thread.daemon=True
+		get_deliv_thread.start()
+		# Application.get_servers_list()
+		# Application.get_deliverables_list()
 		self.grid(row=0, column=0)
 		self.create_new_button()
 		self.create_client()
