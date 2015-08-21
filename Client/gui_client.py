@@ -70,6 +70,7 @@ class Application(Frame):
 		cls.threading_queue.put(threading.currentThread().getName(), 'done')
 
 	def createWidgets(self, order=0):
+		widgets_row = []
 		var_server = StringVar(self)
 		if order == 0:
 			var_server.set(self.servers_list[0])
@@ -78,25 +79,38 @@ class Application(Frame):
 		server = apply(OptionMenu, (self, var_server) + tuple(self.servers_list))
 		server.grid(row=order+1, column=1, pady=5, padx = 5)
 
+		widgets_row.append(server)
+
 		var_deliverable = StringVar(self)
 		var_deliverable.set(self.deliverables_list[0])
 		deliverable = apply(OptionMenu, (self, var_deliverable) + tuple(self.deliverables_list))
 		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
+		widgets_row.append(deliverable)
 
-		calc_button = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, True)).start())
-		calc_button.grid(row=order+1, column=3, pady=5, padx = 5)
+		calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, True)).start())
+		calc_button_light.grid(row=order+1, column=3, pady=5, padx = 5)
+
+		widgets_row.append(calc_button_light)
 		
 		var_patch = StringVar(self)
 		patch = apply(OptionMenu, (self, var_patch, ()))
 		patch.grid(row=order+1, column=4, pady=5, padx = 5)
 
+		widgets_row.append(patch)
+
 		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, False)).start())
 		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
+
+		widgets_row.append(calc_button)
 
 		var_status = StringVar()
 		label = Label( self, textvariable=var_status, relief=RAISED )
 		var_status.set("PLANNED")
 		label.grid(row=order+1, column=6, pady=5, padx = 5)
+
+		widgets_row.append(label)
+
+		self.widgets.append(widgets_row)
 
 		the_row = {}
 		the_row['server_id'] = var_server
@@ -154,8 +168,11 @@ class Application(Frame):
 		start_button.grid(row=0, column=0, pady=15, padx = 15)
 		stop_button = Button(self, text="Stop", width=12, command=self.close_connection)
 		stop_button.grid(row=0, column=1, pady=15, padx = 15)
-		reset_button = Button(self, text="Reset", width=12, command=lambda: threading.Thread(target=self.reinit, args=(self.reactor, self.master)).start())
+		reset_button = Button(self, text="Delete Last", width=12, command=lambda: threading.Thread(target=self.delete_last_row).start())
 		reset_button.grid(row=0, column=2, pady=15, padx = 15)
+		reset_button = Button(self, text="Reset", width=12, command=lambda: threading.Thread(target=self.reinit, args=(self.reactor, self.master)).start())
+		reset_button.grid(row=0, column=3, pady=15, padx = 15)
+		
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
 		new_button.grid(row=1, column=0, pady=5, padx = 30)
 	
@@ -171,13 +188,8 @@ class Application(Frame):
 			pass
 		self.reactor = reactor
 		self.qeue = []
+		self.widgets = []
 		self.order = 0
-		# get_servers_thread = threading.Thread(name='server_list', target=Application.get_servers_list)
-		# get_servers_thread.daemon=True
-		# get_servers_thread.start()
-		# get_deliv_thread = threading.Thread(name='deliv_list', target=Application.get_deliverables_list)
-		# get_deliv_thread.daemon=True
-		# get_deliv_thread.start()
 		Application.get_servers_list()
 		Application.get_deliverables_list()
 		self.grid(row=0, column=0)
@@ -194,7 +206,15 @@ class Application(Frame):
 		self.connection.disconnect()
 
 	def reinit(self, reactor, master=None):
-		self.__init__(self.reactor, self.master)
+		for i in xrange(1, len(self.widgets)):
+			for j in xrange(len(self.widgets[i])):
+				self.widgets[i][j].destroy()
+
+	def delete_last_row(self):
+		if len(self.widgets) > 1:
+			for j in xrange(len(self.widgets[-1])):
+				self.widgets[-1][j].destroy()
+			self.widgets.pop()
 
 
 	def generate_json(self):
