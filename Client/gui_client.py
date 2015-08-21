@@ -70,10 +70,6 @@ class Application(Frame):
 		cls.threading_queue.put(threading.currentThread().getName(), 'done')
 
 	def createWidgets(self, order=0):
-		self.threading_queue.get()
-		self.threading_queue.get()
-
-		
 		var_server = StringVar(self)
 		if order == 0:
 			var_server.set(self.servers_list[0])
@@ -176,14 +172,14 @@ class Application(Frame):
 		self.reactor = reactor
 		self.qeue = []
 		self.order = 0
-		get_servers_thread = threading.Thread(name='server_list', target=Application.get_servers_list)
-		get_servers_thread.daemon=True
-		get_servers_thread.start()
-		get_deliv_thread = threading.Thread(name='deliv_list', target=Application.get_deliverables_list)
-		get_deliv_thread.daemon=True
-		get_deliv_thread.start()
-		# Application.get_servers_list()
-		# Application.get_deliverables_list()
+		# get_servers_thread = threading.Thread(name='server_list', target=Application.get_servers_list)
+		# get_servers_thread.daemon=True
+		# get_servers_thread.start()
+		# get_deliv_thread = threading.Thread(name='deliv_list', target=Application.get_deliverables_list)
+		# get_deliv_thread.daemon=True
+		# get_deliv_thread.start()
+		Application.get_servers_list()
+		Application.get_deliverables_list()
 		self.grid(row=0, column=0)
 		self.create_new_button()
 		self.create_client()
