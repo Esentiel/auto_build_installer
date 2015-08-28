@@ -209,12 +209,14 @@ class Application(Frame):
 		for i in xrange(1, len(self.widgets)):
 			for j in xrange(len(self.widgets[i])):
 				self.widgets[i][j].destroy()
+				self.qeue[i][j].destroy()
 
 	def delete_last_row(self):
 		if len(self.widgets) > 1:
 			for j in xrange(len(self.widgets[-1])):
 				self.widgets[-1][j].destroy()
 			self.widgets.pop()
+			self.qeue.pop()
 
 
 	def generate_json(self):
