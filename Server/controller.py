@@ -4,7 +4,6 @@ import os, json
 class InstallProc(object):
 	"""docstring for InstallProc"""
 	def __init__(self, json_source):
-		logging = logging.getLogger(__name__)
 		logging.debug('json_source:\n{0}'.format(json_source))
 		self.json_source = json_source
 		self.servers_num = int(len(self.json_source['servers'].keys()))
@@ -36,7 +35,7 @@ class InstallProc(object):
 			arr = lock_file.readlines()
 		lock_file.close()
 		server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(','))
-		logging.info('Checking status for {id}, {serv}, {patch}: {info}'.format(id = transaction_id, serv = server_id, patch = patch_num, info = server_info))
+		logging.debug('Checking status: {info}'.format(info = server_info))
 		if (server_info[2] == 'SUCCESSFUL' and int(server_info[1]) == patch_num and server_info[0] == transaction_id) or patch_num == -1:
 			logging.debug('Status for {id}, {serv}, {patch}=True'.format(id = transaction_id, serv = server_id, patch = patch_num))
 			return True
@@ -65,5 +64,5 @@ class InstallProc(object):
 				if 'patch' in patch_key:
 					curr_status = self.__class__.get_progress(self.transaction_id, self.json_source['servers'][server_key]['server_id'], self.json_source['servers'][server_key][patch_key]['order_num'])
 					self.json_source['servers'][server_key][patch_key]['status'] = curr_status
-					logging.debug('Server: {serv}, patch_key: {patch}, status={status}'.format(serv= server_key, patch = patch_key, curr_status))
+					logging.debug('Server: {serv}, patch_key: {patch}, status={status}'.format(serv= server_key, patch = patch_key, status = curr_status))
 		return str(self.json_source).replace('\'','"').replace('u"', '"')

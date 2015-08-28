@@ -3,7 +3,7 @@ from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet import reactor
 from controller import InstallProc
-from logging
+import logging
 import json, sys, os, time
 
 port = 8007
@@ -15,7 +15,7 @@ class MyPP(ProcessProtocol):
 
 	def processExited(self, reason):
 		print "processExited {pid}, status {status}".format(pid = self.pid, status = reason)
-		logging.info("processExited {pid}, status {status}".format(pid = self.pid, status = reason))
+		logging.info("processExited: {pid}, status: {status}".format(pid = self.pid, status = repr(reason.value.__class__)))
 
 
 class BuildConfig(Protocol):
@@ -27,15 +27,14 @@ class BuildConfig(Protocol):
 	def dataReceived(self, data):
 		self.message+=data
 		if '"end": 1}' in self.message:
-			logging.debug('Resuest type: 1')
+			logging.info('Message type #1 received')
 			logging.debug('message: {msg}'.format(msg = self.message))
 			request = json.loads(self.message)
 			self.server_installation = InstallProc(request)
 			self.run_processes(self.server_installation)
 			response = self.server_installation.build_responce()
 			self.transport.write(response)
-			logging.info('Response sent for#1 type')
-			logging.debug('response ofr #1 type: {resp}'.format(repr(response)))
+			logging.debug('response ofr #1 type: {resp}'.format(resp = repr(response)))
 			self.message = ''
 		elif '"end": 2}' in self.message:
 			logging.debug('Resuest type: 2')
@@ -43,8 +42,7 @@ class BuildConfig(Protocol):
 			self.run_processes(self.server_installation)
 			response = str(self.server_installation.build_responce())
 			self.transport.write(response)
-			logging.info('Response sent for#2 type')
-			logging.debug('response ofr #2 type: {resp}'.format(repr(response)))
+			logging.debug('response ofr #2 type: {resp}'.format(resp = repr(response)))
 			self.message = ''
 		else:
 			logging.debug('Message is not full: {msg}'.format(msg = self.message))
