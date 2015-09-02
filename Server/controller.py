@@ -1,9 +1,26 @@
-import logging
-import os, json
+"""controller module is using as intermediate layer between network(communicating with clients) 
+and installatiion(communicating with NC server) levels."""
 
-class InstallProc(object):
-	"""docstring for InstallProc"""
-	def __init__(self, json_source):
+from twisted.internet.protocol import ProcessProtocol
+import os, json, logging
+
+class InstallationProcess(ProcessProtocol):
+	"Wrapper for ProcessProtocol. Is using for logging"
+	def connectionMade(self):
+		self.pid = self.transport.pid
+		print "connectionMade {pid}".format(pid = self.pid)
+
+	def processExited(self, reason):
+		print "processExited {pid}, status {status}".format(pid = self.pid, status = reason)
+		logging.info("processExited {pid}, status {status}".format(pid = self.pid, status = reason))
+
+
+class ControllerLayer(object):
+	"""InstallProc class implements working with messages that are recieved from clients.
+	It transform them into a propper way and use them in futher process."""
+	def initialize(self, json_source):
+		"""Working with dictionary created from json message recieved by server. Transfor it into a better forat(list).
+		Also creating directories and files required for futher processing(by installer.py)."""
 		logging.debug('json_source:\n{0}'.format(json_source))
 		self.json_source = json_source
 		self.servers_num = int(len(self.json_source['servers'].keys()))
@@ -30,7 +47,9 @@ class InstallProc(object):
 				logging.debug('Creation of server lock file for {serv}'.format(serv = self.servers[i][0][1]))
 
 
-	def get_status(self, transaction_id, server_id, patch_num):
+	def check_status(self, transaction_id, server_id, patch_num):
+		"""Checking is it possible to initiate installation of the next patch or not.
+		Verifying lock file for the last row in it. and checking it's status."""
 		with open('servers/{server_id}/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
 			arr = lock_file.readlines()
 		lock_file.close()
@@ -45,7 +64,9 @@ class InstallProc(object):
 		
 
 	@staticmethod
-	def get_progress(transaction_id, server_id, order_num):
+	def get_status(transaction_id, server_id, order_num):
+		"""Getting status for the patch installation. lock file holds status.
+		Or status may ne pending in case there is no any processing for current patch in te lock file."""
 		with open('servers/{server_id}/{server_id}.lock'.format(server_id = server_id), 'r') as lock_file:
 			arr = lock_file.readlines()
 		lock_file.close()
@@ -59,10 +80,29 @@ class InstallProc(object):
 		return 'PENDING'
 
 	def build_responce(self):
+		"""Generating json response with statusesfor each patch installation process."""
 		for server_key in self.json_source['servers'].keys():
 			for patch_key in self.json_source['servers'][server_key].keys():
 				if 'patch' in patch_key:
-					curr_status = self.__class__.get_progress(self.transaction_id, self.json_source['servers'][server_key]['server_id'], self.json_source['servers'][server_key][patch_key]['order_num'])
+					curr_status = self.__class__.get_status(self.transaction_id, self.json_source['servers'][server_key]['server_id'], self.json_source['servers'][server_key][patch_key]['order_num'])
 					self.json_source['servers'][server_key][patch_key]['status'] = curr_status
 					logging.debug('Server: {serv}, patch_key: {patch}, status={status}'.format(serv= server_key, patch = patch_key, status = curr_status))
 		return str(self.json_source).replace('\'','"').replace('u"', '"')
+
+
+	def run_installation(self):
+		"""Initiate installation process as a distinct subproces"""
+		for i in xrange(len(self.servers)):
+			for j in xrange(len(self.servers[i])):
+				transaction_id = self.servers[i][j][0]
+				server_id = self.servers[i][j][1]
+				patch_num = self.servers[i][j][2]-1
+				patch = self.servers[i][j][3]
+				if self.check_status(transaction_id, server_id, patch_num):
+					pp = InstallationProcess()
+					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
+					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
+					print "Process for {pid} started..".format(pid = pp.pid)
+					logging.info("Process for {pid} started with following params: {params}".format(pid = pp.pid, params = repr(self.servers[i][j])))
+					del self.servers[i][j]
+					break
