@@ -269,7 +269,11 @@ class Application(Frame):
 		logging.info('Sexy lady')
 		img_frame = Frame(self.master)
 		img_frame.grid(row=4, column=0)
-		img = ImageTk.PhotoImage(Image.open("girl.jpg"))
+		try:
+			img = ImageTk.PhotoImage(Image.open("girl.jpg"))
+		except:
+			logging.error('girl.jpg is absent in client folder')
+			raise
 		panel = Label(img_frame, image = img)
 		panel.image = img
 		panel.grid(row=0, column=0)
