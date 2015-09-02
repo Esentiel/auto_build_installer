@@ -35,7 +35,7 @@ class InstallProc(object):
 			arr = lock_file.readlines()
 		lock_file.close()
 		server_info = tuple(str([item for item in arr if item != '\n'][-1]).strip(' \t\n\r').split(','))
-		logging.debug('Checking status: {info}'.format(info = server_info))
+		logging.info('Checking status for {info}'.format(info = server_info))
 		if (server_info[2] == 'SUCCESSFUL' and int(server_info[1]) == patch_num and server_info[0] == transaction_id) or patch_num == -1:
 			logging.debug('Status for {id}, {serv}, {patch}=True'.format(id = transaction_id, serv = server_id, patch = patch_num))
 			return True
