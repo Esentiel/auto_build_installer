@@ -3,7 +3,7 @@ from Tkinter import *
 from console_client import InstProtocol, InstFactory, host, port
 from twisted.internet import reactor
 from PIL import ImageTk, Image
-import threading, Queue
+import threading, Queue, logging
 
 class JsonGenerator(object):
 	"""docstring for JsonGenerator"""
@@ -11,40 +11,45 @@ class JsonGenerator(object):
 		super(JsonGenerator, self).__init__()
 		self.json_dict = {}
 		self.json_dict['transaction_id'] = str(uuid.uuid4())
-		# self.json_dict['end'] = 1
 		self.json_dict['servers'] = {}
+		logging.info('generating json. id = {id}'.format(id = self.json_dict['transaction_id']))
 
 	def add_server(self,server_id, order_num):
 		server_num = 'server_{num}'.format(num = order_num)
 		self.json_dict['servers'][server_num] = {}
 		self.json_dict['servers'][server_num]['server_id'] = server_id
+		logging.debug('server added: order_num: {ord}, id = {id}'.format(ord = order_num, id = server_id))
 
 	def add_patch(self, server_order_num, patch_order_num, patch):
 		patch_num = 'patch_{num}'.format(num = patch_order_num)
 		self.json_dict['servers'][server_order_num][patch_num] = {}
 		self.json_dict['servers'][server_order_num][patch_num]['order_num'] = patch_order_num
 		self.json_dict['servers'][server_order_num][patch_num]['patch'] = patch
+		logging.debug('patch added: server = {server_num}, order_num = {ord}, patch = {p}'.format(server_num = server_order_num, ord = patch_order_num, p = patch))
 
 	def dump_to_file(self):
 		with open('install_qeue.json', 'w') as fp:
 			json.dump(self.json_dict, fp)
+			logging.info('dump file generated')
+			logging.debug('info to file: {jdict}'.format(jdict = self.json_dict))
 		fp.close()
 
 	def get_server_num(self, server_id):
 		for i in xrange(len(self.json_dict['servers'].keys())):
 			if self.json_dict['servers']['server_{0}'.format(i)]['server_id'] == server_id:
+				logging.debug('get_server_num returns {num}'.format(num = i))
 				return 'server_{0}'.format(i)
+		logging.debug('get_server_num returns None')
 		return None
-
-	def get_json(self):
-		return self.json_dict
 
 	def get_patch_num(self, server_id):
 		curr_num = len([patch for patch in self.json_dict['servers'][server_id].keys() if 'patch' in patch])
+		logging.debug('get_patch_num returns {num}'.format(num = curr_num))
 		return curr_num
 
 	def get_server_num_exactly(self):
 		curr_num = len([server for server in self.json_dict['servers'].keys() if 'server_' in server])
+		logging.debug('get_server_num_exactly returns {num}'.format(num = curr_num))
 		return curr_num
 
 class Application(Frame):
@@ -55,8 +60,8 @@ class Application(Frame):
 	def get_servers_list(cls):
 		with open('\\\\vm-bee.netcracker.com\config\list.txt', 'r') as the_config:
 			cls.servers_list = the_config.read().replace('instance_id=','').split(',')
+			logging.info('server list was calculated: {slist}'.format(slist = cls.servers_list))
 		the_config.close()
-		cls.threading_queue.put(threading.currentThread().getName(), 'done')
 
 	@classmethod
 	def get_deliverables_list(cls):
@@ -67,9 +72,11 @@ class Application(Frame):
 		deliverables_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
 		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
 		client_ftp.close()
-		cls.threading_queue.put(threading.currentThread().getName(), 'done')
+		logging.info('deliverables list was calculated')
+		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
 
 	def createWidgets(self, order=0):
+		logging.info('Starting createWidgets...')
 		widgets_row = []
 		var_server = StringVar(self)
 		if order == 0:
@@ -119,10 +126,12 @@ class Application(Frame):
 		the_row['patch'] = patch
 		the_row['status'] = var_status
 		self.qeue.append(the_row)
+		logging.debug('The row of Widgets[{ord}]: {row}'.format(ord = order, row = the_row))
 
 		self.order+=1
 
 	def get_deliverable_selected(self, order=0):
+		logging.debug('get_deliverable_selected returns {deliv}'.format(deliv = self.qeue[order]['deliverable'].get()))
 		return self.qeue[order]['deliverable'].get()
 
 	def build_patchs_list(self, order=0, light=False):
@@ -140,12 +149,13 @@ class Application(Frame):
 				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = deliverable))
 		client_ftp.close()
 		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
-
+		logging.debug('patches_list = {plist}'.format(plist = patches_list))
 		self._reset_option_menu(patches_list, order, 0, light)
 
 	def _reset_option_menu(self, options, order=0, index=None, light=False):
 		menu = self.qeue[order]['patch']["menu"]
 		menu.delete(0, "end")
+		logging.info('reseting menu options')
 		if not light:
 			for string in options:
 				menu.add_command(label=string, 
@@ -164,6 +174,7 @@ class Application(Frame):
 			self.qeue[order]['var_patch'].set(options[index])
 
 	def create_new_button(self):
+		logging.info('Creating buttons...')
 		start_button = Button(self, text="Start", width=12, command=lambda: threading.Thread(target=self.generate_json).start())
 		start_button.grid(row=0, column=0, pady=15, padx = 15)
 		stop_button = Button(self, text="Stop", width=12, command=self.close_connection)
@@ -175,9 +186,11 @@ class Application(Frame):
 		
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
 		new_button.grid(row=1, column=0, pady=5, padx = 30)
+		logging.info('Buttons werecreated')
 	
 	def create_client(self):
 		self.client = InstFactory(self.reactor, self.update_status)
+		logging.info('Establishing Network Client...')
 
 	def __init__(self, reactor, master=None):
 		self.master = master
@@ -200,18 +213,22 @@ class Application(Frame):
 		
 
 	def connect_client(self):
+		logging.info('Connection to the Server...')
 		self.connection = self.reactor.connectTCP(host, port, self.client)
 
 	def close_connection(self):
+		logging.info('Clsing connection...')
 		self.connection.disconnect()
 
 	def reinit(self, reactor, master=None):
+		logging.info('Reinit was intiated')
 		for i in xrange(1, len(self.widgets)):
 			for j in xrange(len(self.widgets[i])):
 				self.widgets[i][j].destroy()
 				self.qeue[i][j].destroy()
 
 	def delete_last_row(self):
+		logging.debug('Last rows deletion')
 		if len(self.widgets) > 1:
 			for j in xrange(len(self.widgets[-1])):
 				self.widgets[-1][j].destroy()
@@ -249,6 +266,7 @@ class Application(Frame):
 		self.connect_client()
 
 	def put_girl_on(self):
+		logging.info('Sexy lady')
 		img_frame = Frame(self.master)
 		img_frame.grid(row=4, column=0)
 		img = ImageTk.PhotoImage(Image.open("girl.jpg"))
@@ -258,7 +276,9 @@ class Application(Frame):
 
 
 	def update_status(self, response):
+		logging.info('Updating statuses')
 		for i in xrange(len(response)):
 			for j in xrange(len(self.qeue)):
 				if response[i]['server_id'] == self.qeue[j]['server_id'].get() and response[i]['patch'] == self.qeue[j]['var_patch'].get():
 					self.qeue[j]['status'].set(response[i]['status'])
+		logging.debug('new queue afte updating statuses: {q}'.format(q = self.qeue))
