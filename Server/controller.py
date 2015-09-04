@@ -1,6 +1,6 @@
 """controller module is using as intermediate layer between network(communicating with clients) 
 and installatiion(communicating with NC server) levels."""
-
+from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 import os, json, logging
 
@@ -18,6 +18,9 @@ class InstallationProcess(ProcessProtocol):
 class ControllerLayer(object):
 	"""InstallProc class implements working with messages that are recieved from clients.
 	It transform them into a propper way and use them in futher process."""
+
+	initialized = False
+
 	def initialize(self, json_source):
 		"""Working with dictionary created from json message recieved by server. Transfor it into a better forat(list).
 		Also creating directories and files required for futher processing(by installer.py)."""
@@ -45,6 +48,7 @@ class ControllerLayer(object):
 					lock_file.write('test,0,test')
 				lock_file.close()
 				logging.debug('Creation of server lock file for {serv}'.format(serv = self.servers[i][0][1]))
+		self.initialized = True
 
 
 	def check_status(self, transaction_id, server_id, patch_num):
@@ -105,4 +109,5 @@ class ControllerLayer(object):
 					print "Process for {pid} started..".format(pid = pp.pid)
 					logging.info("Process for {pid} started with following params: {params}".format(pid = pp.pid, params = repr(self.servers[i][j])))
 					del self.servers[i][j]
+					logging.debug(self.servers)
 					break

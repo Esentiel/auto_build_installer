@@ -1,34 +1,37 @@
+"""Module implementing communications with server. Sending requests, receiving responses.
+Request is built from JSON file.
+Response is handled by responce_callback method from GUI part"""
+
 from twisted.internet.protocol import Protocol, ClientFactory
-from sys import stdout
 import json, re, logging
 
-host = 'vm-bee.netcracker.com'
-port = 8007
+host = 'localhost'
+port = 8008
 
-class InstProtocol(Protocol):
+class InstallationProtocol(Protocol):
+	"""Protocol implementation. Communication is processingusing JSON messages"""
 	message = ''
 
 	def __init__(self):
-		with open('install_qeue.json','r') as jsonfile:
-			self.json_data = str(jsonfile.read()).replace('}}}}', '}}},"end": 1}')
+		with open('install_queue.json','r') as jsonfile:
+			self.json_data = str(jsonfile.read()) + '#8^)'
 			logging.info('Input: {data}'.format(data = self.json_data))
 		jsonfile.close()
-		self.json_data_status = self.json_data.replace('"end": 1', '"end": 2')
 
 	def connectionMade(self):
 		self.transport.write(self.json_data)
-		logging.info('Sent data to the server after connectionMade')
 		logging.debug('Sent data: {data}'.format(data = self.json_data))
 
 	def dataReceived(self, data):
-		self.factory.reactor.callLater(5, self.build_log, data)
+		self.factory.reactor.callLater(5, self.response_processing, data)
 		logging.debug('data received: {data}'.format(data = data))
 
-	def build_log(self, data):
+	def response_processing(self, data):
+		"""Woring on a response and sending another request"""
 		self.message += data
-		if '"end"' in self.message:
+		if '#8^)' in self.message:
 			the_response = []
-			response = json.loads(self.message)
+			response = json.loads(self.message.replace('#8^)', ''))
 			for server_key in response['servers'].keys():
 				for patch_key in response['servers'][server_key].keys():
 					if 'patch' in patch_key:
@@ -46,24 +49,25 @@ class InstProtocol(Protocol):
 			self.message = ''
 
 	def sendMsg(self):
-		self.transport.write(self.json_data_status)
+		self.transport.write(self.json_data)
 		logging.info('Sent data to the server')
-		logging.debug('Sent data: {data}'.format(data = self.json_data_status))
+		logging.debug('Sent data: {data}'.format(data = self.json_data))
 
 
-class InstFactory(ClientFactory):
-	protocol = InstProtocol
+class InstallationFactory(ClientFactory):
+	"""Factorythat implements InstallationProtocol protocol"""
+	protocol = InstallationProtocol
 
 	def __init__(self, reactor, responce_callback):
 		self.reactor = reactor
 		self.responce_callback = responce_callback
 
 	def startedConnecting(self, connector):
-		print 'Started to connect.'
+		logging.info('Started to connect.')
 
 	def clientConnectionLost(self, connector, reason):
-		print 'Lost connection.  Reason:', reason
+		logging.warn('Lost connection.  Reason: {r}'.format(r =reason))
 
 	def clientConnectionFailed(self, connector, reason):
-		print 'Connection failed. Reason:', reason
+		logging.error('Connection failed. Reason: {r}'.format(r =reason))
 

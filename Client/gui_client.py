@@ -1,12 +1,44 @@
-import uuid, json, sys, paramiko
-from Tkinter import *
-from console_client import InstProtocol, InstFactory, host, port
-from twisted.internet import reactor
+"""Module implements GUI client for the program.
+Main goals: generate JSON file, Initiate network communication process, provide user with actual statuses
+Also it is possible to stop proces and rerun it in case of need"""
+from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED
+from socket_client import InstallationProtocol, InstallationFactory, host, port
 from PIL import ImageTk, Image
-import threading, Queue, logging
+import uuid, json, sys, paramiko, threading, logging
+
+class SSHConnectionSingleton(type):
+	"""docstring for SSHConnectionSingleton"""
+	def __init__(cls, *args, **kwargs):
+		cls.__instance = None
+		cls.__lock = threading.Lock()
+
+	def __call__(cls, *args, **kwargs):
+
+		if not cls.__instance:
+			with cls.__lock:
+				if not cls.__instance:
+					cls.__instance = super(SSHConnectionSingleton, cls).__call__(*args, **kwargs)
+		return cls.__instance
+
+class SSHClient(object):
+	lock = threading.Lock()
+	__metaclass__ = SSHConnectionSingleton
+	client = paramiko.SSHClient()
+	"""docstring for SSHClient"""
+	def __init__(self):
+		super(SSHClient, self).__init__()
+		self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+		self.client.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
+		self.sftp_ftp = self.client.open_sftp()
+
+	def listdir(self, path):
+		with self.lock:
+			listdir = self.sftp_ftp.listdir(path)
+		return listdir
+
 
 class JsonGenerator(object):
-	"""docstring for JsonGenerator"""
+	"""Class for JSON file generating"""
 	def __init__(self):
 		super(JsonGenerator, self).__init__()
 		self.json_dict = {}
@@ -28,18 +60,18 @@ class JsonGenerator(object):
 		logging.debug('patch added: server = {server_num}, order_num = {ord}, patch = {p}'.format(server_num = server_order_num, ord = patch_order_num, p = patch))
 
 	def dump_to_file(self):
-		with open('install_qeue.json', 'w') as fp:
+		with open('install_queue.json', 'w') as fp:
 			json.dump(self.json_dict, fp)
 			logging.info('dump file generated')
 			logging.debug('info to file: {jdict}'.format(jdict = self.json_dict))
 		fp.close()
 
-	def get_server_num(self, server_id):
+	def server_exists(self, server_id):
 		for i in xrange(len(self.json_dict['servers'].keys())):
 			if self.json_dict['servers']['server_{0}'.format(i)]['server_id'] == server_id:
-				logging.debug('get_server_num returns {num}'.format(num = i))
+				logging.debug('server_exists returns {num}'.format(num = i))
 				return 'server_{0}'.format(i)
-		logging.debug('get_server_num returns None')
+		logging.debug('server_exists returns None')
 		return None
 
 	def get_patch_num(self, server_id):
@@ -47,17 +79,17 @@ class JsonGenerator(object):
 		logging.debug('get_patch_num returns {num}'.format(num = curr_num))
 		return curr_num
 
-	def get_server_num_exactly(self):
+	def get_servers_number(self):
 		curr_num = len([server for server in self.json_dict['servers'].keys() if 'server_' in server])
-		logging.debug('get_server_num_exactly returns {num}'.format(num = curr_num))
+		logging.debug('get_servers_number returns {num}'.format(num = curr_num))
 		return curr_num
 
 class Application(Frame):
-
-	threading_queue = Queue.Queue()
-
+	"""Implements main GUI front-end. All the buttons, lists and so on.
+	Also it implements communication with socket client."""
 	@classmethod
 	def get_servers_list(cls):
+		"""Getting servers list"""
 		with open('\\\\vm-bee.netcracker.com\config\list.txt', 'r') as the_config:
 			cls.servers_list = the_config.read().replace('instance_id=','').split(',')
 			logging.info('server list was calculated: {slist}'.format(slist = cls.servers_list))
@@ -65,24 +97,24 @@ class Application(Frame):
 
 	@classmethod
 	def get_deliverables_list(cls):
-		client_ftp = paramiko.SSHClient()
-		client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
-		sftp_ftp = client_ftp.open_sftp()
-		deliverables_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
+		"""Getting deliverable folders list"""
+		client_ftp = SSHClient()
+		deliverables_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
 		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
-		client_ftp.close()
+		
 		logging.info('deliverables list was calculated')
 		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
 
 	def createWidgets(self, order=0):
+		"""Drawing mmost part of UI: INstallationn Row: Server dropdown deliverable dropdown, patches dropdown,
+		buttons to display patches list, statuses layer"""
 		logging.info('Starting createWidgets...')
 		widgets_row = []
 		var_server = StringVar(self)
 		if order == 0:
 			var_server.set(self.servers_list[0])
 		else:
-			var_server.set(self.qeue[order-1]['server_id'].get())
+			var_server.set(self.queue[order-1]['server_id'].get())
 		server = apply(OptionMenu, (self, var_server) + tuple(self.servers_list))
 		server.grid(row=order+1, column=1, pady=5, padx = 5)
 
@@ -94,7 +126,7 @@ class Application(Frame):
 		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
 		widgets_row.append(deliverable)
 
-		calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, True)).start())
+		calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
 		calc_button_light.grid(row=order+1, column=3, pady=5, padx = 5)
 
 		widgets_row.append(calc_button_light)
@@ -105,7 +137,7 @@ class Application(Frame):
 
 		widgets_row.append(patch)
 
-		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patchs_list, args=(order, False)).start())
+		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, False)).start())
 		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
 
 		widgets_row.append(calc_button)
@@ -125,42 +157,38 @@ class Application(Frame):
 		the_row['var_patch'] = var_patch
 		the_row['patch'] = patch
 		the_row['status'] = var_status
-		self.qeue.append(the_row)
+		self.queue.append(the_row)
 		logging.debug('The row of Widgets[{ord}]: {row}'.format(ord = order, row = the_row))
 
 		self.order+=1
 
 	def get_deliverable_selected(self, order=0):
-		logging.debug('get_deliverable_selected returns {deliv}'.format(deliv = self.qeue[order]['deliverable'].get()))
-		return self.qeue[order]['deliverable'].get()
+		logging.debug('get_deliverable_selected returns {deliv}'.format(deliv = self.queue[order]['deliverable'].get()))
+		return self.queue[order]['deliverable'].get()
 
-	def build_patchs_list(self, order=0, light=False):
+	def build_patches_list(self, order=0, light=False):
 		deliverable = self.get_deliverable_selected(order)
-		client_ftp = paramiko.SSHClient()
-		client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
-		sftp_ftp = client_ftp.open_sftp()
+		client_ftp = SSHClient()
 		try:
-			patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = deliverable))
+			patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = deliverable))
 		except:
 			try:
-				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = deliverable))
+				patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = deliverable))
 			except:
-				patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = deliverable))
-		client_ftp.close()
+				patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = deliverable))
 		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 		logging.debug('patches_list = {plist}'.format(plist = patches_list))
 		self._reset_option_menu(patches_list, order, 0, light)
 
 	def _reset_option_menu(self, options, order=0, index=None, light=False):
-		menu = self.qeue[order]['patch']["menu"]
+		menu = self.queue[order]['patch']["menu"]
 		menu.delete(0, "end")
 		logging.info('reseting menu options')
 		if not light:
 			for string in options:
 				menu.add_command(label=string, 
 								 command=lambda value=string:
-									  self.qeue[order]['var_patch'].set(value))
+									  self.queue[order]['var_patch'].set(value))
 		else:
 			if len(options)< 11:
 				the_len = len(options)
@@ -169,11 +197,11 @@ class Application(Frame):
 			for i in xrange(the_len):
 				menu.add_command(label=options[i], 
 								 command=lambda value=options[i]:
-									  self.qeue[order]['var_patch'].set(value))
+									  self.queue[order]['var_patch'].set(value))
 		if index is not None:
-			self.qeue[order]['var_patch'].set(options[index])
+			self.queue[order]['var_patch'].set(options[index])
 
-	def create_new_button(self):
+	def create_buttons(self):
 		logging.info('Creating buttons...')
 		start_button = Button(self, text="Start", width=12, command=lambda: threading.Thread(target=self.generate_json).start())
 		start_button.grid(row=0, column=0, pady=15, padx = 15)
@@ -189,24 +217,24 @@ class Application(Frame):
 		logging.info('Buttons werecreated')
 	
 	def create_client(self):
-		self.client = InstFactory(self.reactor, self.update_status)
+		self.client = InstallationFactory(self.reactor, self.update_status)
 		logging.info('Establishing Network Client...')
 
 	def __init__(self, reactor, master=None):
 		self.master = master
 		Frame.__init__(self, master)
 		try:
-			sys.remove('install_qeue.json')
+			sys.remove('install_queue.json')
 		except:
 			pass
 		self.reactor = reactor
-		self.qeue = []
+		self.queue = []
 		self.widgets = []
 		self.order = 0
 		Application.get_servers_list()
 		Application.get_deliverables_list()
 		self.grid(row=0, column=0)
-		self.create_new_button()
+		self.create_buttons()
 		self.create_client()
 		self.createWidgets()
 		self.put_girl_on()
@@ -217,50 +245,54 @@ class Application(Frame):
 		self.connection = self.reactor.connectTCP(host, port, self.client)
 
 	def close_connection(self):
-		logging.info('Clsing connection...')
+		logging.info('Closing connection...')
 		self.connection.disconnect()
 
 	def reinit(self, reactor, master=None):
+		"""reset all the config"""
 		logging.info('Reinit was intiated')
-		for i in xrange(1, len(self.widgets)):
-			for j in xrange(len(self.widgets[i])):
+		for i in xrange(len(self.widgets)-1,0,-1):
+			for j in range(len(self.widgets[i])):
 				self.widgets[i][j].destroy()
-				self.qeue[i][j].destroy()
+				# self.queue[i][j].destroy()
+			del self.widgets[i]
+			del self.queue[i]
+		logging.debug(self.order)
+		self.order = 1
 
 	def delete_last_row(self):
 		logging.debug('Last rows deletion')
 		if len(self.widgets) > 1:
 			for j in xrange(len(self.widgets[-1])):
 				self.widgets[-1][j].destroy()
-			self.widgets.pop()
-			self.qeue.pop()
+			del self.widgets[-1]
+			del self.queue[-1]
+			logging.debug(self.order)
+			self.order-=1
 
 
 	def generate_json(self):
-		client_ftp = paramiko.SSHClient()
-		client_ftp.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		client_ftp.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
-		sftp_ftp = client_ftp.open_sftp()
+		client_ftp = SSHClient()
 		json_obj = JsonGenerator()
-		for i in xrange(len(self.qeue)):
-			server_num = json_obj.get_server_num(self.qeue[i]['server_id'].get())
+		for i in xrange(len(self.queue)):
+			server_num = json_obj.server_exists(self.queue[i]['server_id'].get())
 			if not server_num:
-				server_order_num = json_obj.get_server_num_exactly()
-				json_obj.add_server(self.qeue[i]['server_id'].get(), server_order_num)
-				server_num = json_obj.get_server_num(self.qeue[i]['server_id'].get())
+				server_order_num = json_obj.get_servers_number()
+				json_obj.add_server(self.queue[i]['server_id'].get(), server_order_num)
+				server_num = json_obj.server_exists(self.queue[i]['server_id'].get())
 			patch_order_num = json_obj.get_patch_num(server_num)
 			try:
-				sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
-				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
+				client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
+				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			except:
 				try:
-					patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
-					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
+					patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = self.queue[i]['deliverable'].get()))
+					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 				except:
-					patches_list = sftp_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = self.qeue[i]['deliverable'].get()))
-					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(deliv = self.qeue[i]['deliverable'].get(), patch = self.qeue[i]['var_patch'].get())
+					patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
+					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch)
-		client_ftp.close()
+		
 		json_obj.dump_to_file()
 
 		self.connect_client()
@@ -282,7 +314,7 @@ class Application(Frame):
 	def update_status(self, response):
 		logging.info('Updating statuses')
 		for i in xrange(len(response)):
-			for j in xrange(len(self.qeue)):
-				if response[i]['server_id'] == self.qeue[j]['server_id'].get() and response[i]['patch'] == self.qeue[j]['var_patch'].get():
-					self.qeue[j]['status'].set(response[i]['status'])
-		logging.debug('new queue afte updating statuses: {q}'.format(q = self.qeue))
+			for j in xrange(len(self.queue)):
+				if response[i]['server_id'] == self.queue[j]['server_id'].get() and response[i]['patch'] == self.queue[j]['var_patch'].get():
+					self.queue[j]['status'].set(response[i]['status'])
+		logging.debug('new queue after updating statuses: {q}'.format(q = self.queue))

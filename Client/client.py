@@ -4,7 +4,7 @@ from gui_client import Application, JsonGenerator
 import logging
 
 def main():
-	logging.basicConfig(filename='client.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+	logging.basicConfig(filename='client.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 	root = Tk()
 
 	# Install the Reactor support

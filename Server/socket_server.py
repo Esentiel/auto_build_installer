@@ -17,10 +17,12 @@ class InstallationProtocol(Protocol):
 		logging.debug(self.message)
 		if '#8^)' in self.message:
 			logging.debug('message: {msg}'.format(msg = self.message))
-			request = json.loads(self.message)
-			self.controller.initialize(request)
+			request = json.loads(self.message.replace('#8^)', ''))
+			if not self.controller.initialized:
+				logging.debug('WTF')
+				self.controller.initialize(request)
 			self.controller.run_installation()
-			response = self.controller.build_responce()
+			response = self.controller.build_responce() + '#8^)'
 			self.transport.write(response)
 			logging.debug('response: {resp}'.format(resp = repr(response)))
 			self.message = ''

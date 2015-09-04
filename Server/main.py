@@ -9,7 +9,7 @@ import logging
 port = 8008
 
 def main():
-	logging.basicConfig(filename='logs/main.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+	logging.basicConfig(filename='logs/main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 	endpoint = TCP4ServerEndpoint(reactor, port)
 	endpoint.listen(InstallationFactory())
 	reactor.run()
