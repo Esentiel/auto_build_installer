@@ -5,7 +5,7 @@ Response is handled by responce_callback method from GUI part"""
 from twisted.internet.protocol import Protocol, ClientFactory
 import json, re, logging
 
-host = 'localhost'
+host = 'vm-bee.netcracker.com'
 port = 8008
 
 class InstallationProtocol(Protocol):
