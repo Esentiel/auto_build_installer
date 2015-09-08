@@ -1,10 +1,10 @@
 """Module implements GUI client for the program.
 Main goals: generate JSON file, Initiate network communication process, provide user with actual statuses
 Also it is possible to stop proces and rerun it in case of need"""
-from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED
-from socket_client import InstallationProtocol, InstallationFactory, host, port
+from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED, Toplevel, Text, END, INSERT, TclError
+from socket_client import InstallationProtocol, InstallationFactory, LogFactory, host, port, log_port
 from PIL import ImageTk, Image
-import uuid, json, sys, paramiko, threading, logging
+import uuid, json, sys, paramiko, threading, logging, time, glob
 
 class SSHConnectionSingleton(type):
 	"""docstring for SSHConnectionSingleton"""
@@ -100,7 +100,7 @@ class Application(Frame):
 		"""Getting deliverable folders list"""
 		client_ftp = SSHClient()
 		deliverables_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
-		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
+		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'Migration.Master.1' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
 		
 		logging.info('deliverables list was calculated')
 		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
@@ -126,28 +126,35 @@ class Application(Frame):
 		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
 		widgets_row.append(deliverable)
 
-		calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
-		calc_button_light.grid(row=order+1, column=3, pady=5, padx = 5)
+		var_deliverable.trace('w', lambda a,b,c: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
 
-		widgets_row.append(calc_button_light)
+		# calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
+		# calc_button_light.grid(row=order+1, column=3, pady=5, padx = 5)
+
+		# widgets_row.append(calc_button_light)
 		
 		var_patch = StringVar(self)
 		patch = apply(OptionMenu, (self, var_patch, ()))
-		patch.grid(row=order+1, column=4, pady=5, padx = 5)
+		patch.grid(row=order+1, column=3, pady=5, padx = 5)
 
 		widgets_row.append(patch)
 
 		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, False)).start())
-		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
+		calc_button.grid(row=order+1, column=4, pady=5, padx = 5)
 
 		widgets_row.append(calc_button)
 
 		var_status = StringVar()
 		label = Label( self, textvariable=var_status, relief=RAISED )
 		var_status.set("PLANNED")
-		label.grid(row=order+1, column=6, pady=5, padx = 5)
+		label.grid(row=order+1, column=5, pady=5, padx = 5)
 
 		widgets_row.append(label)
+
+		log_button = Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order))
+		log_button.grid(row=order+1, column=6, pady=5, padx = 5)
+
+		widgets_row.append(log_button)
 
 		self.widgets.append(widgets_row)
 
@@ -218,6 +225,7 @@ class Application(Frame):
 	
 	def create_client(self):
 		self.client = InstallationFactory(self.reactor, self.update_status)
+		self.log_client = LogFactory(self.reactor)
 		logging.info('Establishing Network Client...')
 
 	def __init__(self, reactor, master=None):
@@ -243,10 +251,12 @@ class Application(Frame):
 	def connect_client(self):
 		logging.info('Connection to the Server...')
 		self.connection = self.reactor.connectTCP(host, port, self.client)
+		self.log_connection = self.reactor.connectTCP(host, log_port, self.log_client)
 
 	def close_connection(self):
 		logging.info('Closing connection...')
 		self.connection.disconnect()
+		self.log_connection.disconnect()
 
 	def reinit(self, reactor, master=None):
 		"""reset all the config"""
@@ -295,7 +305,24 @@ class Application(Frame):
 		
 		json_obj.dump_to_file()
 
+		self.dump_server_ids()
+
+		try:
+			for name in glob.glob('installer_logs/*_installer.log'):
+				os.remove(name)
+		except:
+			pass
+
 		self.connect_client()
+
+	def dump_server_ids(self):
+		the_servers = []
+		for i in range(len(self.queue)):
+			the_servers.append(self.queue[i]['server_id'].get())
+		the_servers = list(set(the_servers))
+		with open('servers_list.csv', 'w') as serv_list:
+			serv_list.write(';'.join(the_servers))
+		serv_list.close()
 
 	def put_girl_on(self):
 		logging.info('Sexy lady')
@@ -318,3 +345,27 @@ class Application(Frame):
 				if response[i]['server_id'] == self.queue[j]['server_id'].get() and response[i]['patch'] == self.queue[j]['var_patch'].get():
 					self.queue[j]['status'].set(response[i]['status'])
 		logging.debug('new queue after updating statuses: {q}'.format(q = self.queue))
+
+	def show_log(self, order):
+		server_id = self.queue[order]['server_id'].get()
+		t = Toplevel(self)
+		t.wm_title("Log for {serv}".format(serv = server_id))
+		log = Text(t)
+		log.pack(side="top", fill="both", padx=10, pady=10)
+		threading.Thread(target=self.refresh_log, args=(log, order,)).start()
+
+	def refresh_log(self, log, order):
+		server_id = self.queue[order]['server_id'].get()
+		while log:
+			try:
+				log.delete("1.0",END)
+				with open('installer_logs/{serv}_installer.log'.format(serv = server_id), 'r') as thelog:
+					data = thelog.readlines()
+				thelog.close()
+				for line in data:
+					log.insert(END, line)
+				log.see(END)
+				time.sleep(5)
+			except IOError, TclError:
+				logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
+				break

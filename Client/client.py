@@ -1,7 +1,7 @@
 from Tkinter import *
 from twisted.internet import tksupport, reactor
 from gui_client import Application, JsonGenerator
-import logging
+import logging, glob, os
 
 def main():
 	logging.basicConfig(filename='client.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')

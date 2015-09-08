@@ -5,12 +5,13 @@ Response is handled by responce_callback method from GUI part"""
 from twisted.internet.protocol import Protocol, ClientFactory
 import json, re, logging
 
-host = 'localhost'
+host = 'vm-bee.netcracker.com'
 port = 8008
+log_port = 8007
 
 class InstallationProtocol(Protocol):
 	"""Protocol implementation. Communication is processingusing JSON messages"""
-	message = ''
+	message = []
 
 	def __init__(self):
 		with open('install_queue.json','r') as jsonfile:
@@ -28,10 +29,10 @@ class InstallationProtocol(Protocol):
 
 	def response_processing(self, data):
 		"""Woring on a response and sending another request"""
-		self.message += data
-		if '#8^)' in self.message:
+		self.message.append(data)
+		if '#8^)' in data:
 			the_response = []
-			response = json.loads(self.message.replace('#8^)', ''))
+			response = json.loads(''.join(self.message).strip().replace('#8^)', ''))
 			for server_key in response['servers'].keys():
 				for patch_key in response['servers'][server_key].keys():
 					if 'patch' in patch_key:
@@ -46,7 +47,7 @@ class InstallationProtocol(Protocol):
 			logging.debug('the responce: {resp}'.format(resp = the_response))
 
 			self.sendMsg()
-			self.message = ''
+			self.message = []
 
 	def sendMsg(self):
 		self.transport.write(self.json_data)
@@ -70,4 +71,54 @@ class InstallationFactory(ClientFactory):
 
 	def clientConnectionFailed(self, connector, reason):
 		logging.error('Connection failed. Reason: {r}'.format(r =reason))
+
+
+class LogProtocol(Protocol):
+	"""docstring for LogProtocol"""
+	message = ''
+
+	def __init__(self):
+		with open('servers_list.csv', 'r') as thelist:
+			self.servers = thelist.read()
+		thelist.close()
+
+	def connectionMade(self):
+		self.transport.write(self.servers + '#8^)')
+		logging.debug('LOG Sent data: {data}'.format(data = self.servers))
+
+	def dataReceived(self, data):
+		self.factory.reactor.callLater(10, self.response_processing, data)
+		logging.debug('log data received: {data}'.format(data = data))
+
+	def response_processing(self, data):
+		self.message += data
+		if '#8^)' in self.message:
+			response = json.loads(data.replace('#8^)', ''))
+			for key in response.keys():
+				with open('installer_logs/{server_id}_installer.log'.format(server_id = key), 'w') as logfile:
+					logfile.write(response[key])
+				logfile.close()
+			self.sendMsg()
+
+	def sendMsg(self):
+		self.transport.write(self.servers + '#8^)')
+		logging.debug('LOG Sent data: {data}'.format(data = self.servers))
+
+
+class LogFactory(ClientFactory):
+	"""Factorythat implements InstallationProtocol protocol"""
+	protocol = LogProtocol
+
+	def __init__(self, reactor):
+		self.reactor = reactor
+
+	def startedConnecting(self, connector):
+		logging.info('Started to connect.')
+
+	def clientConnectionLost(self, connector, reason):
+		logging.warn('Lost connection.  Reason: {r}'.format(r =reason))
+
+	def clientConnectionFailed(self, connector, reason):
+		logging.error('Connection failed. Reason: {r}'.format(r =reason))
+
 

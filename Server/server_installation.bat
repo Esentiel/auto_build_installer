@@ -1,0 +1,1 @@
+python C:\Server\main.py

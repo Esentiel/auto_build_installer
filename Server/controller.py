@@ -111,3 +111,22 @@ class ControllerLayer(object):
 					del self.servers[i][j]
 					logging.debug(self.servers)
 					break
+
+class GetLogger(object):
+	"""docstring for GetLogger"""
+
+	def build_response(self, server_id):
+		the_dict = {}
+		for server in server_id:
+			if not os.path.exists('servers/{folder}/installer.log'.format(folder = server)):
+				data = 'Loading...'
+			else:
+				with open('servers/{folder}/installer.log'.format(folder = server), 'r') as the_log:
+					data = str(the_log.read()).replace('"', '`').replace('\'', '`').replace('//','').replace('***','')
+				the_log.close()
+			the_dict[server] = unicode(data, "utf-8")
+
+		return str(the_dict).replace('\'','"').replace('u"', '"')
+
+
+		
