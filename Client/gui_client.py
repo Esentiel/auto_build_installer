@@ -4,7 +4,7 @@ Also it is possible to stop proces and rerun it in case of need"""
 from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED, Toplevel, Text, END, INSERT, TclError
 from socket_client import InstallationProtocol, InstallationFactory, LogFactory, host, port, log_port
 from PIL import ImageTk, Image
-import uuid, json, sys, paramiko, threading, logging, time, glob
+import uuid, json, sys, paramiko, threading, logging, time, glob, socket, os
 
 class SSHConnectionSingleton(type):
 	"""docstring for SSHConnectionSingleton"""
@@ -27,15 +27,24 @@ class SSHClient(object):
 	"""docstring for SSHClient"""
 	def __init__(self):
 		super(SSHClient, self).__init__()
+		self.connect()		
+
+	def connect(self):
 		self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 		self.client.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
 		self.sftp_ftp = self.client.open_sftp()
 
 	def listdir(self, path):
-		with self.lock:
-			listdir = self.sftp_ftp.listdir(path)
-		return listdir
-
+		try:
+			with self.lock:
+				listdir = self.sftp_ftp.listdir(path)
+			return listdir
+		except socket.error:
+			self.client.close()
+			self.connect()
+			with self.lock:
+				listdir = self.sftp_ftp.listdir(path)
+			return listdir
 
 class JsonGenerator(object):
 	"""Class for JSON file generating"""
@@ -352,20 +361,45 @@ class Application(Frame):
 		t.wm_title("Log for {serv}".format(serv = server_id))
 		log = Text(t)
 		log.pack(side="top", fill="both", padx=10, pady=10)
-		threading.Thread(target=self.refresh_log, args=(log, order,)).start()
+		if log.winfo_exists():
+			threading.Thread(target=self.refresh_log, args=(log, order,)).start()
 
 	def refresh_log(self, log, order):
 		server_id = self.queue[order]['server_id'].get()
-		while log:
-			try:
+		try:
+			with open('installer_logs/{serv}_installer.log'.format(serv = server_id), 'r') as thelog:
+				data = thelog.readlines()
+			thelog.close()
+			if log.winfo_exists():
 				log.delete("1.0",END)
-				with open('installer_logs/{serv}_installer.log'.format(serv = server_id), 'r') as thelog:
-					data = thelog.readlines()
-				thelog.close()
 				for line in data:
 					log.insert(END, line)
 				log.see(END)
-				time.sleep(5)
-			except IOError, TclError:
-				logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
-				break
+		except IOError:
+			logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
+		finally:
+			self.master.after(10000, lambda: self.refresh_log(log, order))
+		
+			
+
+
+
+
+
+	
+	# def put_log_on_screen(self, txt_area, msg):
+	# 	txt_area.delete("1.0",END)
+	# 	for line in msg:
+	# 			txt_area.insert(END, line)
+	# 	txt_area.see(END)
+
+	# def check_window_exists(self, txt_area):
+	# 	while self.queue.qsize():
+	# 		try:
+	# 			msg = self.queue.get(0)
+	# 		except Queue.Empty:
+	# 			pass
+
+	# 	if txt_area.winfo_exists() and msg:
+	# 		threading.Thread(target=self.put_log_on_screen, args=(txt_area, order,)).start()
+
