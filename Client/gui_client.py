@@ -4,7 +4,7 @@ Also it is possible to stop proces and rerun it in case of need"""
 from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED, Toplevel, Text, END, INSERT, TclError
 from socket_client import InstallationProtocol, InstallationFactory, LogFactory, host, port, log_port
 from PIL import ImageTk, Image
-import uuid, json, sys, paramiko, threading, logging, time, glob, socket, os
+import uuid, json, sys, paramiko, threading, logging, time, glob, socket, os, re
 
 class SSHConnectionSingleton(type):
 	"""docstring for SSHConnectionSingleton"""
@@ -61,12 +61,13 @@ class JsonGenerator(object):
 		self.json_dict['servers'][server_num]['server_id'] = server_id
 		logging.debug('server added: order_num: {ord}, id = {id}'.format(ord = order_num, id = server_id))
 
-	def add_patch(self, server_order_num, patch_order_num, patch):
+	def add_patch(self, server_order_num, patch_order_num, patch, cc):
 		patch_num = 'patch_{num}'.format(num = patch_order_num)
 		self.json_dict['servers'][server_order_num][patch_num] = {}
 		self.json_dict['servers'][server_order_num][patch_num]['order_num'] = patch_order_num
 		self.json_dict['servers'][server_order_num][patch_num]['patch'] = patch
-		logging.debug('patch added: server = {server_num}, order_num = {ord}, patch = {p}'.format(server_num = server_order_num, ord = patch_order_num, p = patch))
+		self.json_dict['servers'][server_order_num][patch_num]['cc'] = cc
+		logging.debug('patch added: server = {server_num}, order_num = {ord}, patch = {p}, cc= {cc}'.format(server_num = server_order_num, ord = patch_order_num, p = patch, cc = cc))
 
 	def dump_to_file(self):
 		with open('install_queue.json', 'w') as fp:
@@ -105,6 +106,15 @@ class Application(Frame):
 		the_config.close()
 
 	@classmethod
+	def get_cc_list(cls):
+		"""comment here"""
+		with open('\\\\vm-bee.netcracker.com\config\cc_list.txt', 'r') as the_config:
+			cls.cc_list = re.sub(r':[\d]+', '', the_config.read()).split('\n')
+			logging.info('server list was calculated: {slist}'.format(slist = cls.cc_list))
+		the_config.close()
+
+
+	@classmethod
 	def get_deliverables_list(cls):
 		"""Getting deliverable folders list"""
 		client_ftp = SSHClient()
@@ -119,49 +129,55 @@ class Application(Frame):
 		buttons to display patches list, statuses layer"""
 		logging.info('Starting createWidgets...')
 		widgets_row = []
+
+		var_cc = StringVar(self)
+		if order == 0:
+			var_cc.set(self.cc_list[0])
+		else:
+			var_cc.set(self.queue[order-1]['cc'].get())
+		
+		cc = apply(OptionMenu, (self, var_cc) + tuple(self.cc_list))
+		cc.grid(row=order+1, column=1, pady=5, padx = 5)
+		widgets_row.append(cc)
+
 		var_server = StringVar(self)
 		if order == 0:
 			var_server.set(self.servers_list[0])
 		else:
 			var_server.set(self.queue[order-1]['server_id'].get())
 		server = apply(OptionMenu, (self, var_server) + tuple(self.servers_list))
-		server.grid(row=order+1, column=1, pady=5, padx = 5)
+		server.grid(row=order+1, column=2, pady=5, padx = 5)
 
 		widgets_row.append(server)
 
 		var_deliverable = StringVar(self)
 		var_deliverable.set(self.deliverables_list[0])
 		deliverable = apply(OptionMenu, (self, var_deliverable) + tuple(self.deliverables_list))
-		deliverable.grid(row=order+1, column=2, pady=5, padx = 5)
+		deliverable.grid(row=order+1, column=3, pady=5, padx = 5)
 		widgets_row.append(deliverable)
 
 		var_deliverable.trace('w', lambda a,b,c: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
-
-		# calc_button_light = Button(self, text="ci_builds", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
-		# calc_button_light.grid(row=order+1, column=3, pady=5, padx = 5)
-
-		# widgets_row.append(calc_button_light)
 		
 		var_patch = StringVar(self)
 		patch = apply(OptionMenu, (self, var_patch, ()))
-		patch.grid(row=order+1, column=3, pady=5, padx = 5)
+		patch.grid(row=order+1, column=4, pady=5, padx = 5)
 
 		widgets_row.append(patch)
 
 		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, False)).start())
-		calc_button.grid(row=order+1, column=4, pady=5, padx = 5)
+		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
 
 		widgets_row.append(calc_button)
 
 		var_status = StringVar()
 		label = Label( self, textvariable=var_status, relief=RAISED )
 		var_status.set("PLANNED")
-		label.grid(row=order+1, column=5, pady=5, padx = 5)
+		label.grid(row=order+1, column=6, pady=5, padx = 5)
 
 		widgets_row.append(label)
 
 		log_button = Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order))
-		log_button.grid(row=order+1, column=6, pady=5, padx = 5)
+		log_button.grid(row=order+1, column=7, pady=5, padx = 5)
 
 		widgets_row.append(log_button)
 
@@ -173,6 +189,7 @@ class Application(Frame):
 		the_row['var_patch'] = var_patch
 		the_row['patch'] = patch
 		the_row['status'] = var_status
+		the_row['cc'] = var_cc
 		self.queue.append(the_row)
 		logging.debug('The row of Widgets[{ord}]: {row}'.format(ord = order, row = the_row))
 
@@ -248,6 +265,7 @@ class Application(Frame):
 		self.queue = []
 		self.widgets = []
 		self.order = 0
+		Application.get_cc_list()
 		Application.get_servers_list()
 		Application.get_deliverables_list()
 		self.grid(row=0, column=0)
@@ -300,6 +318,7 @@ class Application(Frame):
 				json_obj.add_server(self.queue[i]['server_id'].get(), server_order_num)
 				server_num = json_obj.server_exists(self.queue[i]['server_id'].get())
 			patch_order_num = json_obj.get_patch_num(server_num)
+			cc = self.queue[i]['cc'].get()
 			try:
 				client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
 				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
@@ -310,7 +329,7 @@ class Application(Frame):
 				except:
 					patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
 					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
-			json_obj.add_patch(server_num, patch_order_num, patch)
+			json_obj.add_patch(server_num, patch_order_num, patch, cc)
 		
 		json_obj.dump_to_file()
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<db-scheme-manager>
+  <MIGRATION_SLAVE_USER>
+    <component_name>MIGRATION_SLAVE_USER</component_name>
+    <scheme>MIGRATION_SLAVE_USER</scheme>
+    <url>(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={db_host})(PORT={db_port}))(CONNECT_DATA=(SERVICE_NAME={db_sid})))</url>
+    <user>{db_slave_user}</user>
+    <password>{db_slave_user}</password>
+    <as_sys />
+    <param name="custom" value="country_code={cc}"/>
+  </MIGRATION_SLAVE_USER>
+  <REFDATA_SLAVE_USER_{cc}>
+    <component_name>REFDATA_SLAVE_USER_{cc}</component_name>
+    <scheme>REFDATA_SLAVE_USER_{cc}</scheme>
+    <url>(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={db_host})(PORT={db_port}))(CONNECT_DATA=(SERVICE_NAME={db_sid})))</url>
+    <user>{db_slave_user}</user>
+    <password>{db_slave_user}</password>
+    <as_sys />
+    <param name="custom" value="country_code={cc}"/>
+  </REFDATA_SLAVE_USER_{cc}>
+</db-scheme-manager>

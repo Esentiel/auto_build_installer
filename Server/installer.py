@@ -12,7 +12,8 @@ import os
 transaction_id = sys.argv[1]
 instance_name = sys.argv[2]
 order_num = sys.argv[3]
-patch = sys.argv[4]
+cc = sys.argv[4]
+patch = sys.argv[5]
 
 try:
 	os.remove('servers/{folder}/installer.log'.format(folder = instance_name))
@@ -25,9 +26,22 @@ log_file.close()
 
 call(["robocopy", "\\\\vm-bee.netcracker.com\config",".", "config.json"])
 
+with open(r"\\vm-bee.netcracker.com\config\cc_list.txt", 'r') as cc_file:
+    domain_id = str([line.replace('{cc}:'.format(cc = cc), '') for line in cc_file.readlines() if cc in line][0]).strip()
+cc_file.close()
+
+
+
 instance = Instance(instance_name)
-db_user = str(instance_name.upper())
+db_user = instance.db_user.upper()
 app_host = str(instance.app_host)
+db_host = instance.db_host
+db_sid = instance.db_sid
+db_port = instance.db_port
+if '_13' in db_user:
+	db_slave_user = str(instance_name + domain_id).upper()
+else:
+	db_slave_user = db_user
 ssh_user = 'netcrk'
 ssh_port = int(instance.ssh_port)
 m = re.match('.*_(.*)_.*', instance_name)
@@ -35,6 +49,13 @@ server_id = m.group(1)
 if app_host == 'qaapp051.netcracker.com':
 	ssh_key = paramiko.RSAKey.from_private_key_file("keys/key_{server}".format(server = server_id))
 
+with open('templates/dbschememanager.xml', 'r') as xml_file:
+	xml_data = str(xml_file.read()).format(db_host = db_host, db_port = db_port, db_sid = db_sid, db_slave_user = db_slave_user, cc = cc)
+xml_file.close()
+
+with open('servers/{instnc}/dbschememanager.xml'.format(instnc = instance), 'w') as xml_file:
+	xml_file.write(xml_data)
+xml_file.close()
 
 m = re.search('(.*)/(.*)', patch)
 patch_SMB = str(m.group(1)).replace('ftp.netcracker.com/ftp/','')
@@ -58,6 +79,8 @@ elif app_host == 'devapp088.netcracker.com':
 sftp = client.open_sftp()
 sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_name), \
 	'/netcracker/config/{inctnc}/{file}'.format(inctnc = instance_name, file = patch_name))
+sftp.put('servers/{instnc}/dbschememanager.xml'.format(instnc = instance), \
+	'/netcracker/config/{inctnc}/AutoInstaller/dbschememanager.xml'.format(inctnc = instance_name))
 
 command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 client.exec_command(command)

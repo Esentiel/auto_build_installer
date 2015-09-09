@@ -37,6 +37,7 @@ class ControllerLayer(object):
 				patchs_list.append((self.transaction_id, \
 									self.json_source['servers']['server_{0}'.format(i)]['server_id'], \
 									self.json_source['servers']['server_{0}'.format(i)]['patch_{num}'.format(num = j)]['order_num'], \
+									self.json_source['servers']['server_{0}'.format(i)]['patch_{num}'.format(num = j)]['cc'], \
 									self.json_source['servers']['server_{0}'.format(i)]['patch_{num}'.format(num = j)]['patch']))
 			logging.info('Process config: {patch}'.format(patch = patchs_list))
 			self.servers.append(patchs_list)
@@ -101,10 +102,11 @@ class ControllerLayer(object):
 				transaction_id = self.servers[i][j][0]
 				server_id = self.servers[i][j][1]
 				patch_num = self.servers[i][j][2]-1
-				patch = self.servers[i][j][3]
+				cc = self.servers[i][j][3]
+				patch = self.servers[i][j][4]
 				if self.check_status(transaction_id, server_id, patch_num):
 					pp = InstallationProcess()
-					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), patch]
+					command = ['C:\Python27\python.exe','installer.py', transaction_id, server_id, str(patch_num+1), cc, patch]
 					subprocess = reactor.spawnProcess(pp, command[0], command, env=os.environ)
 					print "Process for {pid} started..".format(pid = pp.pid)
 					logging.info("Process for {pid} started with following params: {params}".format(pid = pp.pid, params = repr(self.servers[i][j])))

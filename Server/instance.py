@@ -12,6 +12,7 @@ class Instance:
 		self.app_host = self.instance['app_host']
 		self.app_port = self.instance['app_port']
 		self.ssh_port = self.instance['ssh_port']
+		self.db_user = self.instance['db_user']
 		self.db_host = self.instance['db_host']
 		self.db_port = self.instance['db_port']
 		self.db_sid = self.instance['db_sid']
