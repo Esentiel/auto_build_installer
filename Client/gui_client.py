@@ -381,38 +381,43 @@ class Application(Frame):
 					self.queue[j]['status'].set(response[i]['status'])
 		logging.debug('new queue after updating statuses: {q}'.format(q = self.queue))
 
+	def close_log(self, win, log):
+		log.destroy()
+		win.destroy()
+
+
 	def show_log(self, order):
 		server_id = self.queue[order]['server_id'].get()
 		logging.info('server_id: {0}'.format(server_id))
 		t = Toplevel(self)
+		
 		logging.info('toplvl: {0}'.format(repr(t)))
 		t.wm_title("Log for {serv}".format(serv = server_id))
 		log = Text(t)
+		t.protocol("WM_DELETE_WINDOW", lambda win=t, log=log: self.close_log(win, log))
 		logging.info('log: {0}'.format(repr(log)))
 		log.pack(side="top", fill="both", padx=10, pady=10)
 		if log.winfo_exists():
 			logging.info('log exists_show_log')
-			threading.Thread(target=self.refresh_log, args=(log, order,)).start()
+			threading.Thread(target=self.refresh_log, args=(log, server_id,)).start()
 			logging.info('thread started')
 
 
-	def refresh_log(self, log, order):
-		server_id = self.queue[order]['server_id'].get()
-		try:
-			with open('installer_logs/{serv}_installer.log'.format(serv = server_id), 'r') as thelog:
-				data = thelog.readlines()
-			thelog.close()
-			if log.winfo_exists():
+	def refresh_log(self, log, server_id):
+		if log.winfo_exists():
+			try:
+				with open('installer_logs/{serv}_installer.log'.format(serv = server_id), 'r') as thelog:
+					data = thelog.readlines()
+				thelog.close()
 				logging.info('log exists_refresh_log')
 				log.delete("1.0",END)
-				for line in data:
-					log.insert(END, line)
-					logging.info('inserted line: {0}'.format(line))
+				log.insert("1.0", ''.join(data))
+				log.update_idletasks()
 				log.see(END)
-		except IOError:
-			logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
-		finally:
-			if log.winfo_exists():
-				self.master.after(10000, threading.Thread(target=lambda log=log, order=order: self.refresh_log(log, order)).start)
-				logging.info('after started..')
-		
+			except IOError:
+				logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
+			# finally:
+			# 	if log.winfo_exists():
+			# 		self.master.after(10000, lambda: self.refresh_log(log, server_id))
+			# 		logging.info('after started..')
+			
