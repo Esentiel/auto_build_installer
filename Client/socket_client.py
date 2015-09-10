@@ -3,11 +3,8 @@ Request is built from JSON file.
 Response is handled by responce_callback method from GUI part"""
 
 from twisted.internet.protocol import Protocol, ClientFactory
+from config import host, port, log_port
 import json, re, logging
-
-host = 'vm-bee.netcracker.com'
-port = 8008
-log_port = 8007
 
 class InstallationProtocol(Protocol):
 	"""Protocol implementation. Communication is processingusing JSON messages"""

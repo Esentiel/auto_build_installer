@@ -2,7 +2,8 @@
 Main goals: generate JSON file, Initiate network communication process, provide user with actual statuses
 Also it is possible to stop proces and rerun it in case of need"""
 from Tkinter import StringVar, OptionMenu, Button, Label, Frame, RAISED, Toplevel, Text, END, INSERT, TclError
-from socket_client import InstallationProtocol, InstallationFactory, LogFactory, host, port, log_port
+from socket_client import InstallationProtocol, InstallationFactory, LogFactory
+from config import serv_list, cc_list, ftp_root, ftp_root_extnd, delivs, host, port, log_port
 from PIL import ImageTk, Image
 import uuid, json, sys, paramiko, threading, logging, time, glob, socket, os, re
 
@@ -100,7 +101,7 @@ class Application(Frame):
 	@classmethod
 	def get_servers_list(cls):
 		"""Getting servers list"""
-		with open('\\\\vm-bee.netcracker.com\config\list.txt', 'r') as the_config:
+		with open(serv_list, 'r') as the_config:
 			cls.servers_list = the_config.read().replace('instance_id=','').split(',')
 			logging.info('server list was calculated: {slist}'.format(slist = cls.servers_list))
 		the_config.close()
@@ -108,7 +109,7 @@ class Application(Frame):
 	@classmethod
 	def get_cc_list(cls):
 		"""comment here"""
-		with open('\\\\vm-bee.netcracker.com\config\cc_list.txt', 'r') as the_config:
+		with open(cc_list, 'r') as the_config:
 			cls.cc_list = re.sub(r':[\d]+', '', the_config.read()).split('\n')
 			logging.info('server list was calculated: {slist}'.format(slist = cls.cc_list))
 		the_config.close()
@@ -118,9 +119,15 @@ class Application(Frame):
 	def get_deliverables_list(cls):
 		"""Getting deliverable folders list"""
 		client_ftp = SSHClient()
-		deliverables_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables')
-		cls.deliverables_list = [deliverable for deliverable in deliverables_list if 'Migration.Core.1' in  deliverable or 'PPS.1' in deliverable or 'PH1.Migration.SmokeTest' in deliverable or 'PPS.9' in deliverable or 'Migration.Master.1' in deliverable or 'RefData' in deliverable or 'data-duplicator' in deliverable]
-		
+		deliverables_list = client_ftp.listdir(path=ftp_root)
+		cls.deliverables_list = []
+		for deliverable in deliverables_list:
+			for dev in delivs:
+				if dev in deliverable:
+					cls.deliverables_list.append(deliverable)
+		cls.deliverables_list = list(set(cls.deliverables_list))
+		cls.deliverables_list.sort()
+
 		logging.info('deliverables list was calculated')
 		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
 
@@ -203,12 +210,12 @@ class Application(Frame):
 		deliverable = self.get_deliverable_selected(order)
 		client_ftp = SSHClient()
 		try:
-			patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = deliverable))
+			patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci_builds/'.format(root = ftp_root, deliv = deliverable))
 		except:
 			try:
-				patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = deliverable))
+				patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = deliverable))
 			except:
-				patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = deliverable))
+				patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = deliverable))
 		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 		logging.debug('patches_list = {plist}'.format(plist = patches_list))
 		self._reset_option_menu(patches_list, order, 0, light)
@@ -320,15 +327,15 @@ class Application(Frame):
 			patch_order_num = json_obj.get_patch_num(server_num)
 			cc = self.queue[i]['cc'].get()
 			try:
-				client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
-				patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+				client_ftp.listdir(path='{root}/{deliv}/_ci_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+				patch = '{root}/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			except:
 				try:
-					patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/'.format(deliv = self.queue[i]['deliverable'].get()))
-					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+					patch = '{root}/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 				except:
-					patches_list = client_ftp.listdir(path='./Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/'.format(deliv = self.queue[i]['deliverable'].get()))
-					patch = 'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliverables/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+					patch = '{root}/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch, cc)
 		
 		json_obj.dump_to_file()
@@ -376,12 +383,18 @@ class Application(Frame):
 
 	def show_log(self, order):
 		server_id = self.queue[order]['server_id'].get()
+		logging.info('server_id: {0}'.format(server_id))
 		t = Toplevel(self)
+		logging.info('toplvl: {0}'.format(repr(t)))
 		t.wm_title("Log for {serv}".format(serv = server_id))
 		log = Text(t)
+		logging.info('log: {0}'.format(repr(log)))
 		log.pack(side="top", fill="both", padx=10, pady=10)
 		if log.winfo_exists():
+			logging.info('log exists_show_log')
 			threading.Thread(target=self.refresh_log, args=(log, order,)).start()
+			logging.info('thread started')
+
 
 	def refresh_log(self, log, order):
 		server_id = self.queue[order]['server_id'].get()
@@ -390,35 +403,16 @@ class Application(Frame):
 				data = thelog.readlines()
 			thelog.close()
 			if log.winfo_exists():
+				logging.info('log exists_refresh_log')
 				log.delete("1.0",END)
 				for line in data:
 					log.insert(END, line)
+					logging.info('inserted line: {0}'.format(line))
 				log.see(END)
 		except IOError:
 			logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
 		finally:
-			self.master.after(10000, lambda: self.refresh_log(log, order))
+			if log.winfo_exists():
+				self.master.after(10000, threading.Thread(target=lambda log=log, order=order: self.refresh_log(log, order)).start)
+				logging.info('after started..')
 		
-			
-
-
-
-
-
-	
-	# def put_log_on_screen(self, txt_area, msg):
-	# 	txt_area.delete("1.0",END)
-	# 	for line in msg:
-	# 			txt_area.insert(END, line)
-	# 	txt_area.see(END)
-
-	# def check_window_exists(self, txt_area):
-	# 	while self.queue.qsize():
-	# 		try:
-	# 			msg = self.queue.get(0)
-	# 		except Queue.Empty:
-	# 			pass
-
-	# 	if txt_area.winfo_exists() and msg:
-	# 		threading.Thread(target=self.put_log_on_screen, args=(txt_area, order,)).start()
-

@@ -53,7 +53,7 @@ with open('templates/dbschememanager.xml', 'r') as xml_file:
 	xml_data = str(xml_file.read()).format(db_host = db_host, db_port = db_port, db_sid = db_sid, db_slave_user = db_slave_user, cc = cc)
 xml_file.close()
 
-with open('servers/{instnc}/dbschememanager.xml'.format(instnc = instance), 'w') as xml_file:
+with open('servers/{instnc}/dbschememanager.xml'.format(instnc = instance_name), 'w') as xml_file:
 	xml_file.write(xml_data)
 xml_file.close()
 
@@ -79,13 +79,13 @@ elif app_host == 'devapp088.netcracker.com':
 sftp = client.open_sftp()
 sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_name), \
 	'/netcracker/config/{inctnc}/{file}'.format(inctnc = instance_name, file = patch_name))
-sftp.put('servers/{instnc}/dbschememanager.xml'.format(instnc = instance), \
+sftp.put('servers/{instnc}/dbschememanager.xml'.format(instnc = instance_name), \
 	'/netcracker/config/{inctnc}/AutoInstaller/dbschememanager.xml'.format(inctnc = instance_name))
 
 command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 client.exec_command(command)
 time.sleep(20)
-command = 'tail -25 /netcracker/config/{instnc}/installer_logs/installer.log'.format(instnc = instance_name)
+command = 'tail -65 /netcracker/config/{instnc}/installer_logs/installer.log'.format(instnc = instance_name)
 in_progress = False
 while True:
 	stdin, stdout, stderr = client.exec_command(command)
