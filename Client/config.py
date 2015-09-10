@@ -1,4 +1,4 @@
-host='localhost'
+host='vm-bee.netcracker.com'
 port=8008
 log_port=8007
 rez="1280x860"
