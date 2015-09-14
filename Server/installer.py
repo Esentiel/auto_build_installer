@@ -39,7 +39,7 @@ db_host = instance.db_host
 db_sid = instance.db_sid
 db_port = instance.db_port
 if '_13' in db_user:
-	db_slave_user = str(instance_name + domain_id).upper()
+	db_slave_user = str(instance_name + '_' + domain_id).upper()
 else:
 	db_slave_user = db_user
 ssh_user = 'netcrk'
