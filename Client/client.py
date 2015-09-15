@@ -9,7 +9,7 @@ def on_closing(root, reactor):
 	reactor.stop()
 
 def main():
-	logging.basicConfig(filename='client.log', level=logging.INFO, format='%(asctime)s -  %(name)s - %(thread)d - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+	logging.basicConfig(filename='client.log', level=logging.DEBUG, format='%(asctime)s -  %(name)s - %(thread)d - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 	root = Tk()
 	root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root, reactor))
 

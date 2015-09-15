@@ -176,17 +176,19 @@ class Application(Frame):
 
 		widgets_row.append(calc_button)
 
+		log_button = Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order))
+		log_button.grid(row=order+1, column=6, pady=5, padx = 5)
+
+		widgets_row.append(log_button)
+
 		var_status = StringVar()
-		label = Label( self, textvariable=var_status, relief=RAISED )
+		label = Label( self, textvariable=var_status, width=15)
 		var_status.set("PLANNED")
-		label.grid(row=order+1, column=6, pady=5, padx = 5)
+		label.grid(row=order+1, column=7, pady=5, padx = 5)
 
 		widgets_row.append(label)
 
-		log_button = Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order))
-		log_button.grid(row=order+1, column=7, pady=5, padx = 5)
-
-		widgets_row.append(log_button)
+		
 
 		self.widgets.append(widgets_row)
 
@@ -399,7 +401,7 @@ class Application(Frame):
 		log.pack(side="top", fill="both", padx=10, pady=10)
 		if log.winfo_exists():
 			logging.info('log exists_show_log')
-			threading.Thread(target=self.refresh_log, args=(log, server_id,)).start()
+			self.refresh_log(log, server_id)
 			logging.info('thread started')
 
 
@@ -416,8 +418,8 @@ class Application(Frame):
 				log.see(END)
 			except IOError:
 				logging.warn('installer_logs/{serv}_installer.log'.format(serv = server_id))
-			# finally:
-			# 	if log.winfo_exists():
-			# 		self.master.after(10000, lambda: self.refresh_log(log, server_id))
-			# 		logging.info('after started..')
+			finally:
+				if log.winfo_exists():
+					self.master.after(10000, lambda: self.refresh_log(log, server_id))
+					logging.info('after started..')
 			

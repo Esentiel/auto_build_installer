@@ -3,6 +3,7 @@ Request is built from JSON file.
 Response is handled by responce_callback method from GUI part"""
 
 from twisted.internet.protocol import Protocol, ClientFactory
+from twisted.protocols.basic import LineReceiver
 from config import host, port, log_port
 import json, re, logging
 
@@ -29,7 +30,7 @@ class InstallationProtocol(Protocol):
 		self.message.append(data)
 		if '#8^)' in data:
 			the_response = []
-			response = json.loads(''.join(self.message).strip().replace('#8^)', ''))
+			response = json.loads(unicode(''.join(self.message).strip().replace('#8^)', ''), errors='ignore'))
 			for server_key in response['servers'].keys():
 				for patch_key in response['servers'][server_key].keys():
 					if 'patch' in patch_key:
@@ -70,9 +71,8 @@ class InstallationFactory(ClientFactory):
 		logging.error('Connection failed. Reason: {r}'.format(r =reason))
 
 
-class LogProtocol(Protocol):
+class LogProtocol(LineReceiver):
 	"""docstring for LogProtocol"""
-	message = ''
 
 	def __init__(self):
 		with open('servers_list.csv', 'r') as thelist:
@@ -80,25 +80,24 @@ class LogProtocol(Protocol):
 		thelist.close()
 
 	def connectionMade(self):
-		self.transport.write(self.servers + '#8^)')
+		self.transport.write(self.servers+'\r\n')
 		logging.debug('LOG Sent data: {data}'.format(data = self.servers))
 
-	def dataReceived(self, data):
+	def lineReceived(self, data):
 		self.factory.reactor.callLater(10, self.response_processing, data)
 		logging.debug('log data received: {data}'.format(data = data))
 
 	def response_processing(self, data):
-		self.message += data
-		if '#8^)' in self.message:
-			response = json.loads(data.replace('#8^)', ''))
-			for key in response.keys():
-				with open('installer_logs/{server_id}_installer.log'.format(server_id = key), 'w') as logfile:
-					logfile.write(response[key])
-				logfile.close()
-			self.sendMsg()
+		logging.info('log resp: '+data)
+		response = json.loads(data.strip())
+		for key in response.keys():
+			with open('installer_logs/{server_id}_installer.log'.format(server_id = key), 'w') as logfile:
+				logfile.write(response[key])
+			logfile.close()
+		self.sendMsg()
 
 	def sendMsg(self):
-		self.transport.write(self.servers + '#8^)')
+		self.transport.write(self.servers+'\r\n')
 		logging.debug('LOG Sent data: {data}'.format(data = self.servers))
 
 
