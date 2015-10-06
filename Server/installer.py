@@ -82,7 +82,10 @@ sftp.put("servers/{inst}/{p_name}".format(inst = instance_name,p_name = patch_na
 sftp.put('servers/{instnc}/dbschememanager.xml'.format(instnc = instance_name), \
 	'/netcracker/config/{inctnc}/AutoInstaller/dbschememanager.xml'.format(inctnc = instance_name))
 
-command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
+if 'data-toolkit-restore' in patch_name:
+	command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh dtk.schema_to_restore={domain} > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name, domain = domain_id)
+else:
+	command = 'cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 client.exec_command(command)
 time.sleep(20)
 command = 'tail -65 /netcracker/config/{instnc}/installer_logs/installer.log'.format(instnc = instance_name)
