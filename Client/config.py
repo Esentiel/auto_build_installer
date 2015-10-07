@@ -9,5 +9,4 @@ ftp_root_extnd=r'ftp.netcracker.com/ftp/Projects/DHL/IM.GRE_CP/_Internal_Deliver
 with open('config.cfg', 'r') as cfg:
 	delivs=cfg.read().strip().split(';')
 cfg.close()
-delivs=['Migration.Core.1','PPS.1','PH1.Migration.SmokeTest','PPS.9','Migration.Master.1','RefData','data-duplicator']
 title='Anime Auto bulk installer tool for DHL project and friends'
