@@ -132,7 +132,6 @@ class Application(Frame):
 		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
 
 	def createWidgets(self, order=0):
-		print str(len(self.widgets))+'<->'+str(order)
 		"""Drawing mmost part of UI: INstallationn Row: Server dropdown deliverable dropdown, patches dropdown,
 		buttons to display patches list, statuses layer"""
 		logging.info('Starting createWidgets...')
@@ -192,15 +191,7 @@ class Application(Frame):
 		var_status.set("PLANNED")
 		label.grid(row=order+1, column=7, pady=5, padx = 5)
 
-		widgets_row.append(label)
-
-		var_row = StringVar()
-		label = Label( self, textvariable=var_row, width=15)
-		var_row.set(str(order+1))
-		label.grid(row=order+1, column=8, pady=5, padx = 5)
-
-		widgets_row.append(label)
-		
+		widgets_row.append(label)		
 
 		self.widgets.append(widgets_row)
 
@@ -236,6 +227,11 @@ class Application(Frame):
 		except:
 			pass
 		try:
+			patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = deliverable))
+			patches_list = [rev.replace('.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
+		except:
+			pass
+		try:
 			patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = deliverable))
 			patches_list = [rev.replace('.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 		except:
@@ -249,22 +245,25 @@ class Application(Frame):
 		menu = self.queue[order]['patch']["menu"]
 		menu.delete(0, "end")
 		logging.info('reseting menu options')
-		if not light:
-			for string in options:
-				menu.add_command(label=string, 
-								 command=lambda value=string:
-									  self.queue[order]['var_patch'].set(value))
+		if len(options) == 0:
+			log.info('There are no patches under this deliverable')
 		else:
-			if len(options)< 11:
-				the_len = len(options)
+			if not light:
+				for string in options:
+					menu.add_command(label=string, 
+									 command=lambda value=string:
+										  self.queue[order]['var_patch'].set(value))
 			else:
-				the_len = 11
-			for i in xrange(the_len):
-				menu.add_command(label=options[i], 
-								 command=lambda value=options[i]:
-									  self.queue[order]['var_patch'].set(value))
-		if index is not None:
-			self.queue[order]['var_patch'].set(options[index])
+				if len(options)< 11:
+					the_len = len(options)
+				else:
+					the_len = 11
+				for i in xrange(the_len):
+					menu.add_command(label=options[i], 
+									 command=lambda value=options[i]:
+										  self.queue[order]['var_patch'].set(value))
+			if index is not None:
+				self.queue[order]['var_patch'].set(options[index])
 
 	def create_buttons(self):
 		logging.info('Creating buttons...')
@@ -369,8 +368,12 @@ class Application(Frame):
 					patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
 					patch = '{root}/{deliv}/_ci-builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 				except:
-					patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-					patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					try:
+						patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+						patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					except:
+						patches_list = client_ftp.listdir(path='{root}/{deliv}/_Product.part/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+						patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch, cc)
 		
 		json_obj.dump_to_file()
