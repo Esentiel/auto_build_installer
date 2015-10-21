@@ -1,7 +1,7 @@
 host='vm-bee.netcracker.com'
 port=8008
 log_port=8007
-rez="1320x860"
+rez="1420x860"
 serv_list=r'\\vm-bee.netcracker.com\config\list.txt'
 cc_list=r'\\vm-bee.netcracker.com\config\cc_list.txt'
 ftp_root=r'./Projects/DHL/IM.GRE_CP/_Internal_Deliverables'

@@ -211,14 +211,25 @@ class Application(Frame):
 	def build_patches_list(self, order=0, light=False):
 		deliverable = self.get_deliverable_selected(order)
 		client_ftp = SSHClient()
+		patches_list = []
+		prod_patches_list = []
+		try:
+			prod_patches_list = client_ftp.listdir(path='{root}/{deliv}/_Product.part/'.format(root = ftp_root, deliv = deliverable))
+			prod_patches_list = [rev.replace('.zip', '') for rev in list(reversed(prod_patches_list)) if '.PD_' in rev and '.folder' not in rev]
+		except:
+			pass
 		try:
 			patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci_builds/'.format(root = ftp_root, deliv = deliverable))
+			patches_list = [rev.replace('.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
 		except:
-			try:
-				patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = deliverable))
-			except:
-				patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = deliverable))
-		patches_list = [rev.replace('_autoinstaller.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
+			pass
+		try:
+			patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = deliverable))
+			patches_list = [rev.replace('.zip', '') for rev in list(reversed(patches_list)) if 'autoinstaller.zip' in rev and '.folder' not in rev]
+		except:
+			pass
+		
+		patches_list = prod_patches_list+patches_list
 		logging.debug('patches_list = {plist}'.format(plist = patches_list))
 		self._reset_option_menu(patches_list, order, 0, light)
 
@@ -330,14 +341,14 @@ class Application(Frame):
 			cc = self.queue[i]['cc'].get()
 			try:
 				client_ftp.listdir(path='{root}/{deliv}/_ci_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-				patch = '{root}/{deliv}/_ci_builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+				patch = '{root}/{deliv}/_ci_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			except:
 				try:
 					patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-					patch = '{root}/{deliv}/_ci-builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					patch = '{root}/{deliv}/_ci-builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 				except:
 					patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-					patch = '{root}/{deliv}/_manual_builds/{patch}_autoinstaller.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+					patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch, cc)
 		
 		json_obj.dump_to_file()
