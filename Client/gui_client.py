@@ -132,10 +132,16 @@ class Application(Frame):
 		logging.debug('deliverables list: {dlist}'.format(dlist = cls.deliverables_list))
 
 	def createWidgets(self, order=0):
+		print str(len(self.widgets))+'<->'+str(order)
 		"""Drawing mmost part of UI: INstallationn Row: Server dropdown deliverable dropdown, patches dropdown,
 		buttons to display patches list, statuses layer"""
 		logging.info('Starting createWidgets...')
 		widgets_row = []
+
+		delete_button = Button(self, text="Delete Row", width=12, command=lambda order=order: self.delete_row(order))
+		delete_button.grid(row=order+1, column=0, pady=5, padx = 15)
+		widgets_row.append(delete_button)
+
 
 		var_cc = StringVar(self)
 		if order == 0:
@@ -171,7 +177,7 @@ class Application(Frame):
 
 		widgets_row.append(patch)
 
-		calc_button = Button(self, text="more", width=8, command=lambda: threading.Thread(target=self.build_patches_list, args=(order, False)).start())
+		calc_button = Button(self, text="more", width=8, command=lambda order = order: self.build_patches_list(order, False))
 		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
 
 		widgets_row.append(calc_button)
@@ -188,6 +194,12 @@ class Application(Frame):
 
 		widgets_row.append(label)
 
+		var_row = StringVar()
+		label = Label( self, textvariable=var_row, width=15)
+		var_row.set(str(order+1))
+		label.grid(row=order+1, column=8, pady=5, padx = 5)
+
+		widgets_row.append(label)
 		
 
 		self.widgets.append(widgets_row)
@@ -202,7 +214,7 @@ class Application(Frame):
 		self.queue.append(the_row)
 		logging.debug('The row of Widgets[{ord}]: {row}'.format(ord = order, row = the_row))
 
-		self.order+=1
+		# self.order+=1
 
 	def get_deliverable_selected(self, order=0):
 		logging.debug('get_deliverable_selected returns {deliv}'.format(deliv = self.queue[order]['deliverable'].get()))
@@ -256,17 +268,16 @@ class Application(Frame):
 
 	def create_buttons(self):
 		logging.info('Creating buttons...')
+		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(len(self.widgets)))
+		new_button.grid(row=0, column=0, pady=5, padx = 15)
 		start_button = Button(self, text="Start", width=12, command=lambda: threading.Thread(target=self.generate_json).start())
-		start_button.grid(row=0, column=0, pady=15, padx = 15)
+		start_button.grid(row=0, column=1, pady=15, padx = 15)
 		stop_button = Button(self, text="Stop", width=12, command=self.close_connection)
-		stop_button.grid(row=0, column=1, pady=15, padx = 15)
-		reset_button = Button(self, text="Delete Last", width=12, command=lambda: threading.Thread(target=self.delete_last_row).start())
-		reset_button.grid(row=0, column=2, pady=15, padx = 15)
+		stop_button.grid(row=0, column=2, pady=15, padx = 15)
 		reset_button = Button(self, text="Reset", width=12, command=lambda: threading.Thread(target=self.reinit, args=(self.reactor, self.master)).start())
 		reset_button.grid(row=0, column=3, pady=15, padx = 15)
 		
-		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(self.order))
-		new_button.grid(row=1, column=0, pady=5, padx = 30)
+		
 		logging.info('Buttons werecreated')
 	
 	def create_client(self):
@@ -284,7 +295,6 @@ class Application(Frame):
 		self.reactor = reactor
 		self.queue = []
 		self.widgets = []
-		self.order = 0
 		Application.get_cc_list()
 		Application.get_servers_list()
 		Application.get_deliverables_list()
@@ -314,18 +324,30 @@ class Application(Frame):
 				# self.queue[i][j].destroy()
 			del self.widgets[i]
 			del self.queue[i]
-		logging.debug(self.order)
-		self.order = 1
+			
 
-	def delete_last_row(self):
-		logging.debug('Last rows deletion')
+	def delete_row(self, order):
 		if len(self.widgets) > 1:
-			for j in xrange(len(self.widgets[-1])):
-				self.widgets[-1][j].destroy()
-			del self.widgets[-1]
-			del self.queue[-1]
-			logging.debug(self.order)
-			self.order-=1
+			i = order
+			while i < len(self.widgets):
+				if i == order:
+					for j in xrange(len(self.widgets[i])):
+						self.widgets[i][j].grid_forget()
+						self.widgets[i][j].destroy()
+					del self.widgets[i]
+					del self.queue[i]
+					if i < len(self.widgets):
+						self.widgets[i][0].config(command=lambda order=i: self.delete_row(order))
+						self.widgets[i][5].config(command=lambda order=i:self.build_patches_list(order, False))
+						for j in xrange(len(self.widgets[i])):
+							self.widgets[i][j].grid(row = i + 1)
+				else:
+					self.widgets[i][0].config(command=lambda order=i: self.delete_row(order))
+					self.widgets[i][5].config(command=lambda order=i:self.build_patches_list(order, False))
+					for j in xrange(len(self.widgets[i])):
+						self.widgets[i][j].grid(row = i + 1)
+				i+=1
+			self.update_idletasks()
 
 
 	def generate_json(self):
@@ -433,4 +455,3 @@ class Application(Frame):
 				if log.winfo_exists():
 					self.master.after(10000, lambda: self.refresh_log(log, server_id))
 					logging.info('after started..')
-			
