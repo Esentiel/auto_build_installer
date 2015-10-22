@@ -136,72 +136,58 @@ class Application(Frame):
 		buttons to display patches list, statuses layer"""
 		logging.info('Starting createWidgets...')
 		widgets_row = []
+		the_row = {}
 
-		delete_button = Button(self, text="Delete Row", width=12, command=lambda order=order: self.delete_row(order))
-		delete_button.grid(row=order+1, column=0, pady=5, padx = 15)
-		widgets_row.append(delete_button)
+		widgets_row.append(Button(self, text="Delete Row", width=12, command=lambda order=order: self.delete_row(order)))
+		widgets_row[0].grid(row=order+1, column=0, pady=5, padx = 15)
 
 
-		var_cc = StringVar(self)
+		the_row['cc'] = StringVar(self)
 		if order == 0:
-			var_cc.set(self.cc_list[0])
+			the_row['cc'].set(self.cc_list[0])
 		else:
-			var_cc.set(self.queue[order-1]['cc'].get())
+			the_row['cc'].set(self.queue[order-1]['cc'].get())
 		
-		cc = apply(OptionMenu, (self, var_cc) + tuple(self.cc_list))
-		cc.grid(row=order+1, column=1, pady=5, padx = 5)
-		widgets_row.append(cc)
+		widgets_row.append(apply(OptionMenu, (self, the_row['cc']) + tuple(self.cc_list)))
+		widgets_row[1].grid(row=order+1, column=1, pady=5, padx = 5)
 
-		var_server = StringVar(self)
+
+		the_row['server_id'] = StringVar(self)
 		if order == 0:
-			var_server.set(self.servers_list[0])
+			the_row['server_id'].set(self.servers_list[0])
 		else:
-			var_server.set(self.queue[order-1]['server_id'].get())
-		server = apply(OptionMenu, (self, var_server) + tuple(self.servers_list))
-		server.grid(row=order+1, column=2, pady=5, padx = 5)
+			the_row['server_id'].set(self.queue[order-1]['server_id'].get())
+		widgets_row.append(apply(OptionMenu, (self, the_row['server_id']) + tuple(self.servers_list)))
+		widgets_row[2].grid(row=order+1, column=2, pady=5, padx = 5)
 
-		widgets_row.append(server)
+		the_row['deliverable'] = StringVar(self)
+		the_row['deliverable'].set(self.deliverables_list[0])
+		widgets_row.append(apply(OptionMenu, (self, the_row['deliverable']) + tuple(self.deliverables_list)))
+		widgets_row[3].grid(row=order+1, column=3, pady=5, padx = 5)
 
-		var_deliverable = StringVar(self)
-		var_deliverable.set(self.deliverables_list[0])
-		deliverable = apply(OptionMenu, (self, var_deliverable) + tuple(self.deliverables_list))
-		deliverable.grid(row=order+1, column=3, pady=5, padx = 5)
-		widgets_row.append(deliverable)
+		the_row['trace'] = the_row['deliverable'].trace('w', lambda a,b,c: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
 
-		var_deliverable.trace('w', lambda a,b,c: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
-		
-		var_patch = StringVar(self)
-		patch = apply(OptionMenu, (self, var_patch, ()))
-		patch.grid(row=order+1, column=4, pady=5, padx = 5)
+		the_row['var_patch'] = StringVar(self)
+		widgets_row.append(apply(OptionMenu, (self, the_row['var_patch'], ())))
+		widgets_row[4].grid(row=order+1, column=4, pady=5, padx = 5)
+		the_row['patch'] = widgets_row[4]
 
-		widgets_row.append(patch)
 
-		calc_button = Button(self, text="more", width=8, command=lambda order = order: self.build_patches_list(order, False))
-		calc_button.grid(row=order+1, column=5, pady=5, padx = 5)
 
-		widgets_row.append(calc_button)
+		widgets_row.append(Button(self, text="more", width=8, command=lambda order = order: self.build_patches_list(order, False)))
+		widgets_row[5].grid(row=order+1, column=5, pady=5, padx = 5)
 
-		log_button = Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order))
-		log_button.grid(row=order+1, column=6, pady=5, padx = 5)
+		widgets_row.append(Button(self, text="Show Log", width=8, command=lambda order = order: self.show_log(order)))
+		widgets_row[6].grid(row=order+1, column=6, pady=5, padx = 5)
 
-		widgets_row.append(log_button)
-
-		var_status = StringVar()
-		label = Label( self, textvariable=var_status, width=15)
-		var_status.set("PLANNED")
-		label.grid(row=order+1, column=7, pady=5, padx = 5)
-
-		widgets_row.append(label)		
+		the_row['status'] = StringVar()
+		widgets_row.append(Label( self, textvariable=the_row['status'], width=15))
+		the_row['status'].set("PLANNED")
+		widgets_row[7].grid(row=order+1, column=7, pady=5, padx = 5)	
 
 		self.widgets.append(widgets_row)
 
-		the_row = {}
-		the_row['server_id'] = var_server
-		the_row['deliverable'] = var_deliverable
-		the_row['var_patch'] = var_patch
-		the_row['patch'] = patch
-		the_row['status'] = var_status
-		the_row['cc'] = var_cc
+		
 		self.queue.append(the_row)
 		logging.debug('The row of Widgets[{ord}]: {row}'.format(ord = order, row = the_row))
 
@@ -264,6 +250,8 @@ class Application(Frame):
 										  self.queue[order]['var_patch'].set(value))
 			if index is not None:
 				self.queue[order]['var_patch'].set(options[index])
+
+		# self.update()
 
 	def create_buttons(self):
 		logging.info('Creating buttons...')
@@ -328,6 +316,7 @@ class Application(Frame):
 	def delete_row(self, order):
 		if len(self.widgets) > 1:
 			i = order
+
 			while i < len(self.widgets):
 				if i == order:
 					for j in xrange(len(self.widgets[i])):
@@ -338,11 +327,17 @@ class Application(Frame):
 					if i < len(self.widgets):
 						self.widgets[i][0].config(command=lambda order=i: self.delete_row(order))
 						self.widgets[i][5].config(command=lambda order=i:self.build_patches_list(order, False))
+						self.widgets[i][6].config(command=lambda order = i : self.show_log(order))
+						self.queue[i]['deliverable'].trace_vdelete('w', self.queue[i]['trace'])
+						self.queue[i]['deliverable'].trace('w', lambda a,b,c, order = i: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
 						for j in xrange(len(self.widgets[i])):
 							self.widgets[i][j].grid(row = i + 1)
 				else:
 					self.widgets[i][0].config(command=lambda order=i: self.delete_row(order))
 					self.widgets[i][5].config(command=lambda order=i:self.build_patches_list(order, False))
+					self.widgets[i][6].config(command=lambda order = i : self.show_log(order))
+					self.queue[i]['deliverable'].trace_vdelete('w', self.queue[i]['trace'])
+					self.queue[i]['deliverable'].trace('w', lambda a,b,c, order = i: threading.Thread(target=self.build_patches_list, args=(order, True)).start())
 					for j in xrange(len(self.widgets[i])):
 						self.widgets[i][j].grid(row = i + 1)
 				i+=1

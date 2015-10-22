@@ -35,11 +35,13 @@ class InstallationProtocol(Protocol):
 				for patch_key in response['servers'][server_key].keys():
 					if 'patch' in patch_key:
 						the_row = {}
+						# the_row['patch_num'] = patch_key.replace('patch_','')
 						the_row['server_id'] = response['servers'][server_key]['server_id']
-						the_row['patch'] = str(re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1)).replace('_autoinstaller.zip', '')
+						the_row['patch'] = str(re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1)).replace('.zip', '')
 						the_row['status'] = response['servers'][server_key][patch_key]['status']
 						logging.debug('row with status: {row}'.format(row = the_row))
 						the_response.append(the_row)
+			logging.error(the_response)
 			self.factory.responce_callback(the_response)
 			logging.info('responce_callback initiated')
 			logging.debug('the responce: {resp}'.format(resp = the_response))
