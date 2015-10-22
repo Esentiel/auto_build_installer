@@ -46,6 +46,23 @@ class SSHClient(object):
 			with self.lock:
 				listdir = self.sftp_ftp.listdir(path)
 			return listdir
+	def stat(self, path):
+		try:
+			with self.lock:
+				self.sftp_ftp.stat(path)
+			return True
+		except socket.error:
+			self.client.close()
+			self.connect()
+			try:
+				with self.lock:
+					self.sftp_ftp.stat(path)
+			except IOError, e:
+				if e[0] == 2:
+					return False
+		except IOError, e:
+			if e[0] == 2:
+				return False
 
 class JsonGenerator(object):
 	"""Class for JSON file generating"""
@@ -251,8 +268,6 @@ class Application(Frame):
 			if index is not None:
 				self.queue[order]['var_patch'].set(options[index])
 
-		# self.update()
-
 	def create_buttons(self):
 		logging.info('Creating buttons...')
 		new_button = Button(self, text="New Server", width=12, command=lambda: self.createWidgets(len(self.widgets)))
@@ -343,7 +358,6 @@ class Application(Frame):
 				i+=1
 			self.update_idletasks()
 
-
 	def generate_json(self):
 		client_ftp = SSHClient()
 		json_obj = JsonGenerator()
@@ -355,20 +369,14 @@ class Application(Frame):
 				server_num = json_obj.server_exists(self.queue[i]['server_id'].get())
 			patch_order_num = json_obj.get_patch_num(server_num)
 			cc = self.queue[i]['cc'].get()
-			try:
-				client_ftp.listdir(path='{root}/{deliv}/_ci_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
+			if client_ftp.stat('{root}/{deliv}/_ci_builds/{patch}.zip'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())):
 				patch = '{root}/{deliv}/_ci_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
-			except:
-				try:
-					patches_list = client_ftp.listdir(path='{root}/{deliv}/_ci-builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-					patch = '{root}/{deliv}/_ci-builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
-				except:
-					try:
-						patches_list = client_ftp.listdir(path='{root}/{deliv}/_manual_builds/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-						patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
-					except:
-						patches_list = client_ftp.listdir(path='{root}/{deliv}/_Product.part/'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get()))
-						patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+			elif client_ftp.stat('{root}/{deliv}/_ci-builds/{patch}.zip'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())):
+				patch = '{root}/{deliv}/_ci-builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+			elif client_ftp.stat('{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())):	
+				patch = '{root}/{deliv}/_manual_builds/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
+			elif client_ftp.stat('{root}/{deliv}/_Product.part/{patch}.zip'.format(root = ftp_root, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())):
+				patch = '{root}/{deliv}/_Product.part/{patch}.zip'.format(root = ftp_root_extnd, deliv = self.queue[i]['deliverable'].get(), patch = self.queue[i]['var_patch'].get())
 			json_obj.add_patch(server_num, patch_order_num, patch, cc)
 		
 		json_obj.dump_to_file()
