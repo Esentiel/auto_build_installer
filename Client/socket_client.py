@@ -7,7 +7,7 @@ from twisted.protocols.basic import LineReceiver
 from config import host, port, log_port
 import json, re, logging
 
-class InstallationProtocol(Protocol):
+class InstallationProtocol(LineReceiver):
 	"""Protocol implementation. Communication is processingusing JSON messages"""
 	message = []
 
@@ -21,7 +21,7 @@ class InstallationProtocol(Protocol):
 		self.transport.write(self.json_data)
 		logging.debug('Sent data: {data}'.format(data = self.json_data))
 
-	def dataReceived(self, data):
+	def lineReceived(self, data):
 		self.factory.reactor.callLater(5, self.response_processing, data)
 		logging.debug('data received: {data}'.format(data = data))
 
@@ -41,7 +41,6 @@ class InstallationProtocol(Protocol):
 						the_row['status'] = response['servers'][server_key][patch_key]['status']
 						logging.debug('row with status: {row}'.format(row = the_row))
 						the_response.append(the_row)
-			logging.error(the_response)
 			self.factory.responce_callback(the_response)
 			logging.info('responce_callback initiated')
 			logging.debug('the responce: {resp}'.format(resp = the_response))
