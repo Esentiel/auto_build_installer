@@ -13,12 +13,12 @@ class InstallationProtocol(LineReceiver):
 
 	def __init__(self):
 		with open('install_queue.json','r') as jsonfile:
-			self.json_data = str(jsonfile.read()) + '#8^)'
+			self.json_data = str(jsonfile.read())
 			logging.info('Input: {data}'.format(data = self.json_data))
 		jsonfile.close()
 
 	def connectionMade(self):
-		self.transport.write(self.json_data)
+		self.transport.write(self.json_data+'\r\n')
 		logging.debug('Sent data: {data}'.format(data = self.json_data))
 
 	def lineReceived(self, data):
@@ -28,28 +28,27 @@ class InstallationProtocol(LineReceiver):
 	def response_processing(self, data):
 		"""Woring on a response and sending another request"""
 		self.message.append(data)
-		if '#8^)' in data:
-			the_response = []
-			response = json.loads(unicode(''.join(self.message).strip().replace('#8^)', ''), errors='ignore'))
-			for server_key in response['servers'].keys():
-				for patch_key in response['servers'][server_key].keys():
-					if 'patch' in patch_key:
-						the_row = {}
-						# the_row['patch_num'] = patch_key.replace('patch_','')
-						the_row['server_id'] = response['servers'][server_key]['server_id']
-						the_row['patch'] = str(re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1)).replace('.zip', '')
-						the_row['status'] = response['servers'][server_key][patch_key]['status']
-						logging.debug('row with status: {row}'.format(row = the_row))
-						the_response.append(the_row)
-			self.factory.responce_callback(the_response)
-			logging.info('responce_callback initiated')
-			logging.debug('the responce: {resp}'.format(resp = the_response))
+		the_response = []
+		response = json.loads(unicode(''.join(self.message).strip(), errors='ignore'))
+		for server_key in response['servers'].keys():
+			for patch_key in response['servers'][server_key].keys():
+				if 'patch' in patch_key:
+					the_row = {}
+					# the_row['patch_num'] = patch_key.replace('patch_','')
+					the_row['server_id'] = response['servers'][server_key]['server_id']
+					the_row['patch'] = str(re.match('.*/(.*)', response['servers'][server_key][patch_key]['patch']).group(1)).replace('.zip', '')
+					the_row['status'] = response['servers'][server_key][patch_key]['status']
+					logging.debug('row with status: {row}'.format(row = the_row))
+					the_response.append(the_row)
+		self.factory.responce_callback(the_response)
+		logging.info('responce_callback initiated')
+		logging.debug('the responce: {resp}'.format(resp = the_response))
 
-			self.sendMsg()
-			self.message = []
+		self.sendMsg()
+		self.message = []
 
 	def sendMsg(self):
-		self.transport.write(self.json_data)
+		self.transport.write(self.json_data+'\r\n')
 		logging.info('Sent data to the server')
 		logging.debug('Sent data: {data}'.format(data = self.json_data))
 
