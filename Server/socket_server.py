@@ -5,18 +5,16 @@ from twisted.protocols.basic import LineReceiver
 from controller import ControllerLayer, GetLogger
 import logging, json, os
 
-class InstallationProtocol(Protocol):
+class InstallationProtocol(LineReceiver):
 	"""Network protocol description. Receiving messages, translate to JSON, building responses"""
-	message = ''
 
 	def __init__(self, factory):
 		self.factory = factory
 		self.controller = ControllerLayer()
 
 	def lineReceived(self, data):
-		logging.debug(self.message)
-		logging.debug('message: {msg}'.format(msg = self.message))
-		request = json.loads(self.message.strip())
+		logging.debug('message received: {msg}'.format(msg = data))
+		request = json.loads(data.strip())
 		if not self.controller.initialized:
 			logging.debug('WTF')
 			self.controller.initialize(request)
@@ -24,7 +22,6 @@ class InstallationProtocol(Protocol):
 		response = self.controller.build_responce() 
 		self.transport.write(response + '\r\n')
 		logging.debug('response: {resp}'.format(resp = repr(response)))
-		self.message = ''
 
 class InstallationFactory(Factory):
 	"""Server Factory for InstallationProtocol.
