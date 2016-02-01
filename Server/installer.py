@@ -84,6 +84,8 @@ sftp.put('servers/{instnc}/dbschememanager.xml'.format(instnc = instance_name), 
 
 if 'data-toolkit-restore' in patch_name:
 	command = 'source ~/.bash_profile && cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh dtk.schema_to_restore={domain} > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name, domain = domain_id)
+elif '96_8.2.1.DHL.DM.RefData' in patch_name:
+	command = 'source ~/.bash_profile && cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh bystep=96_8.2.1.DHL.DM.RefData:attr_step_list > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 else:
 	command = 'source ~/.bash_profile && cd /netcracker/config/{instnc}; unzip -oq {pch}; ./install.sh > /dev/null 2>&1 &'.format(instnc = instance_name,pch = patch_name)
 client.exec_command(command)
