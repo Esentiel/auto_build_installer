@@ -32,7 +32,7 @@ class SSHClient(object):
 
 	def connect(self):
 		self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		self.client.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'XXqiI3nY', port=22)
+		self.client.connect(hostname='ftp.netcracker.com', username='dhl_ro', password = 'yourpassword', port=22)
 		self.sftp_ftp = self.client.open_sftp()
 
 	def listdir(self, path):
